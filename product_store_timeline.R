@@ -4,8 +4,10 @@ library(data.table)
 path = "/home/didi/BGSE/semester3/kernel/data/assortment/"
 setwd(path)
 
-#extract the file names 
+# extract the file names 
 file.names <- dir(path, pattern =".RData")
+# remove 20160315 file due to sales compatability 
+file.names = file.names[-length(file.names)]
 
 #initialize empty data table
 product_store_timeline = data.table(storeID = integer(0),productID = character(0))
@@ -41,15 +43,30 @@ for(i in 1:length(file.names)){
   product_store_timeline[,col4:=ifelse(product_store_timeline[,store_product_ID]
                                        %in% file[,store_product_ID],1,0)]
   
-  # Rename the column to be equl ro the date 
+  # Rename the column to be equl to the date 
   date = regmatches(file.names[i], regexpr("[0-9].*[0-9]", file.names[i]))
   names(product_store_timeline)[ncol(product_store_timeline)]<-date
   
 }
 
-saveRDS(product_store_timeline,file = "/home/didi/BGSE/semester3/kernel/data/product_store_timeline.RData")
 
 total_days = rowSums(product_store_timeline[,4:442, with = FALSE])
 
+# add it to the data table
+product_store_timeline_total_days = as.data.frame(product_store_timeline[,.(storeID,productID)])
+product_store_timeline_total_days = as.data.table(cbind(product_store_timeline_total_days,total_days))
 
+# just point to where you want to save it
+# the file below has storeID,productID and a boolean column for each of the dates in the assortment 
+saveRDS(product_store_timeline,file = "/home/didi/BGSE/semester3/kernel/data/product_store_timeline.RData")
+# the file below has the storeID, productID and the total number of days it was sold  
+saveRDS(product_store_timeline_total_days,file = "/home/didi/BGSE/semester3/kernel/data/product_store_timeline_total_days.RData")
 
+########################
+### Correction for Sales Dates
+########################
+product_store_timeline = readRDS("/home/didi/BGSE/semester3/kernel/data/product_store_timeline.RData")
+total_days = rowSums(product_store_timeline[,4:441, with = FALSE])
+product_store_timeline_total_days = as.data.frame(product_store_timeline[,.(storeID,productID)])
+product_store_timeline_total_days = as.data.table(cbind(product_store_timeline_total_days,total_days))
+saveRDS(product_store_timeline_total_days,file = "/home/didi/BGSE/semester3/kernel/data/product_store_timeline_total_days_sales.RData")

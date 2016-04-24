@@ -18,5 +18,8 @@ for (i in id){
    if (c!= 1){changing_stores_promo=c(changing_stores_promo,i)}
 }
 
+# Result: 
+# the promotional group changes and nothing else does
+
 
 
