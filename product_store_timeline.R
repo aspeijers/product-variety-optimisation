@@ -50,7 +50,7 @@ for(i in 1:length(file.names)){
 }
 
 
-total_days = rowSums(product_store_timeline[,4:442, with = FALSE])
+total_days = rowSums(product_store_timeline[,4:441, with = FALSE])
 
 # add it to the data table
 product_store_timeline_total_days = as.data.frame(product_store_timeline[,.(storeID,productID)])
@@ -61,12 +61,3 @@ product_store_timeline_total_days = as.data.table(cbind(product_store_timeline_t
 saveRDS(product_store_timeline,file = "/home/didi/BGSE/semester3/kernel/data/product_store_timeline.RData")
 # the file below has the storeID, productID and the total number of days it was sold  
 saveRDS(product_store_timeline_total_days,file = "/home/didi/BGSE/semester3/kernel/data/product_store_timeline_total_days.RData")
-
-########################
-### Correction for Sales Dates
-########################
-product_store_timeline = readRDS("/home/didi/BGSE/semester3/kernel/data/product_store_timeline.RData")
-total_days = rowSums(product_store_timeline[,4:441, with = FALSE])
-product_store_timeline_total_days = as.data.frame(product_store_timeline[,.(storeID,productID)])
-product_store_timeline_total_days = as.data.table(cbind(product_store_timeline_total_days,total_days))
-saveRDS(product_store_timeline_total_days,file = "/home/didi/BGSE/semester3/kernel/data/product_store_timeline_total_days_sales.RData")
