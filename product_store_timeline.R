@@ -1,7 +1,8 @@
 library(data.table)
 
 # path to the variety files 
-path = "/home/didi/BGSE/semester3/kernel/data/assortment/"
+#path = "/home/didi/BGSE/semester3/kernel/data/assortment/"
+path = "~/Desktop/BGSE/Term3/MasterProject/GSE/old/assortment"
 setwd(path)
 
 # extract the file names 
