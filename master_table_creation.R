@@ -64,13 +64,26 @@ master_table <- master_table[days_in_assort > 5]
 stores <- readRDS("stores.RData")
 stores[,c("date","promo_group") := list(NULL, NULL)]
 stores <- unique(stores) #3326
+#check if there are any stores in master table that are not in stores table
+length(setdiff(master_table$storeID, stores$storeID)) #No
 master_table <- merge(master_table, stores, by="storeID")
 
+## Add province and autonomous community data. NB we only have around 2 thirds of the stores here, so we have ~106865 NA's
+regions <- readRDS("province.RData")
+regions <- unique(regions) #1781
+# find storeID's common to both master table and regions table
+stores_used  <- intersect(regions$ipdv, master_table$storeID)
+regions      <- regions[ipdv %in% stores_used]
+#check that there are now no stores in regions that are not also in master table
+length(setdiff(regions$ipdv, master_table$storeID)) #correct
+master_table <- merge(master_table, regions, by.x="storeID", by.y="ipdv", all=TRUE)
 
 ## Add product variables to master table
 products <- readRDS("products.RData")
 products[,c("iniDate", "endDate") := list(NULL, NULL)]
-products <- unique(products) # doesn't change anything. Already unique. 
+products <- unique(products) # doesn't change anything. Already unique.
+#check there are no products in master table that are not in products table
+length(setdiff(master_table$productID, products$productID)) #No
 master_table <- merge(master_table, products, by="productID")
 
 
@@ -94,6 +107,8 @@ dim(master_table)[1] - dim(c)[1] #91,739 entries lost
 # leave them in there for the moment, in case we don't use these variables.
 ################################################################################
 
+# replace empty cells in size column with NA.
+is.na(master_table$size) <- which(master_table$size == "")
 
 # save master table
 saveRDS(master_table, file="master_table.RData")
