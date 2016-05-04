@@ -20,3 +20,8 @@ Running this file is a prerequisite for running other files.
 ### aggregate_sales_subChain_subFam.R
 Averages the sales over sub-chains and sub-families.
 Prerequisite: "master_table.R"
+
+### data_splitting.R
+Splits the master table data into training (75percent) and test (25percent) by stores, keeping the distribution of store sizes equal. There is also the start of some code to split by time, however this is not to be run yet. 
+Prerequisite: "master_table.R"
+Running this file will be a prerequisite to trialling sales functions. 
