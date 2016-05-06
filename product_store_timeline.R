@@ -55,8 +55,14 @@ for(i in 1:length(file.names)){
 total_days = rowSums(product_store_timeline[,4:441, with = FALSE])
 
 # add it to the data table
-product_store_timeline_total_days = as.data.frame(product_store_timeline[,.(storeID,productID)])
-product_store_timeline_total_days = as.data.table(cbind(product_store_timeline_total_days,total_days))
+product_store_timeline_total_days <- as.data.frame(product_store_timeline[,.(storeID,productID, store_product_ID)])
+product_store_timeline_total_days <- as.data.table(cbind(product_store_timeline_total_days,total_days))
+
+# remove observations from product store timeline tables for which there is no sales data
+sales_obs <- sales[,store_product_ID:=paste(storeID, productID,sep="")]
+product_store_timeline <- product_store_timeline[store_product_ID %in% sales_obs$store_product_ID]
+product_store_timeline_total_days <- product_store_timeline_total_days[store_product_ID %in% sales_obs$store_product_ID]
+
 
 # just point to where you want to save it
 # the file below has storeID,productID and a boolean column for each of the dates in the assortment 
