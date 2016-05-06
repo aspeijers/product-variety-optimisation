@@ -2,8 +2,11 @@
 ### Date 19.04.2015
 ### Additional matherial = data_info.ods and picture of the scheme
 
+library(data.table)
+
 ## Note set the working directory to the folder where your data is
-setwd("/home/didi/BGSE/semester3/kernel/data")
+#setwd("/home/didi/BGSE/semester3/kernel/data")
+setwd("/media/balint/Storage/Tanulas/thesis/product-variety-optimisation")
 
 # Sales Table 
 sales <- readRDS("selInClean.RData")
@@ -18,12 +21,12 @@ saveRDS(products, "products.RData")
 # Stores Table
 stores <- readRDS("pdvClean.RData")
 #remove client 50
-stores <- stores[,-3]
+stores <- stores[,"client50":=NULL]
 names(stores)<-c("storeID","promo_group","sub_chain", "chain", "town", "size", "date")
 saveRDS(stores, "stores.RData")
 
 # Variety 
-path = "/home/didi/BGSE/semester3/kernel/data/assortment/"
+path = "/media/balint/Storage/Tanulas/thesis/product-variety-optimisation/assortment/"
 setwd(path)
 
 file.names <- dir(path, pattern =".RData")
@@ -38,6 +41,3 @@ for(i in 1:length(file.names)){
   # save the new file
   saveRDS(file,new.name.extension)
 }
-
-
-

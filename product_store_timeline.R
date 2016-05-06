@@ -2,7 +2,8 @@ library(data.table)
 
 # path to the variety files 
 #path = "/home/didi/BGSE/semester3/kernel/data/assortment/"
-path = "~/Desktop/BGSE/Term3/MasterProject/GSE/old/assortment"
+# path = "~/Desktop/BGSE/Term3/MasterProject/GSE/old/assortment"
+path = "/media/balint/Storage/Tanulas/thesis/product-variety-optimisation/assortment/"
 setwd(path)
 
 # extract the file names 
@@ -59,6 +60,6 @@ product_store_timeline_total_days = as.data.table(cbind(product_store_timeline_t
 
 # just point to where you want to save it
 # the file below has storeID,productID and a boolean column for each of the dates in the assortment 
-saveRDS(product_store_timeline,file = "/home/didi/BGSE/semester3/kernel/data/product_store_timeline.RData")
+saveRDS(product_store_timeline,file = "/media/balint/Storage/Tanulas/thesis/product-variety-optimisation/product_store_timeline.RData")
 # the file below has the storeID, productID and the total number of days it was sold  
-saveRDS(product_store_timeline_total_days,file = "/home/didi/BGSE/semester3/kernel/data/product_store_timeline_total_days.RData")
+saveRDS(product_store_timeline_total_days,file = "/media/balint/Storage/Tanulas/thesis/product-variety-optimisation/product_store_timeline_total_days.RData")
