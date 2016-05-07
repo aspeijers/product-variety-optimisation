@@ -38,10 +38,9 @@ product_timeline <- readRDS("product_timeline.RData")
 
 
 #UPDATING THE PRODUCTS TABLE
-productIDs <- unique(product_timeline$productID)
 products <- readRDS("products.RData")
-products <- products[products$productID %in% productIDs,]
-
+sales <- readRDS("sales.RData")
+products <- products[products$productID %in% sales$productID,]
 #summary information about products
 prod <- product_timeline[,.(min = min(market_size), avg = mean(market_size),
                             max = max(market_size), firstweek = sum(head(market_size),7),
@@ -52,6 +51,8 @@ prod <- product_timeline[,.(min = min(market_size), avg = mean(market_size),
 products$availability <- NA
 #alltimers are products which were available in more than 500 stores during the whole period
 products$availability[products$productID %in% prod[prod$min>500,]$productID] <- "alltimer"
+productIDs <- unique(product_timeline$productID)
+products$availability[!(products$productID %in% productIDs)] <- "not_in_assortment_data"
 saveRDS(products, file= "products.RData")
 
 
