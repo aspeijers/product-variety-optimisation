@@ -42,11 +42,12 @@ product_timeline <- readRDS("product_timeline.RData")
 #UPDATING THE PRODUCTS TABLE
 products <- readRDS("products.RData")
 sales <- readRDS("sales.RData")
+#take only the products which are in sales
 products <- products[products$productID %in% sales$productID,]
 #summary information about products
 prod <- product_timeline[,.(min = min(market_size), avg = mean(market_size),
                             max = max(market_size), firstweek = sum(head(market_size, 7)),
-                            lastweek = sum(tail(market_size,7)), by=.(productID)]
+                            lastweek = sum(tail(market_size,7))), by=.(productID)]
 
 #introducing availability variable,
 #a factor telling about the time structure of the availability of the product
