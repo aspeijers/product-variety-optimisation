@@ -57,6 +57,8 @@ max_date_sales <- max(sales$date)
 min_date <- max(min_date_assort, min_date_sales)
 max_date <- min(max_date_assort, max_date_sales)
 
+rm(min_date_sales, min_date_assort, max_date_sales, max_date_assort)
+
 # calculate first and last days for training and test data
 total_time <- (max_date-min_date) +1
 training_total_days <- round(total_time * 0.75)
@@ -68,16 +70,16 @@ test_firstday <- training_lastday +1
 test_lastday <- max_date
 test_total_days <- (test_lastday - test_firstday) + 1
 
-rm(max_date_assort, max_date_sales, min_date_assort, min_date_sales)
-
-
 ## Recreate master table, split and aggregate by date
 
 assort_days <- readRDS("product_store_timeline.RData")
 
-assort_train <- assort_days[,1:(3+training_total_days), with=FALSE]
+assort_train <- assort_days[,1:(3+training_total_days-1), with=FALSE] #in order to have 2015-11-25 as the last day
+# NOTE: that when the column count and the date count differ with 1 
+# so actually the days are 328 not 329!!!! Because we don't count 2015-03-26 it is our benchmark
 assort_test <- cbind(assort_days[,.(storeID, productID, store_product_ID)], 
-                     assort_days[,(3+training_total_days+1):ncol(assort_days), with=FALSE])
+                     assort_days[,(3+training_total_days):ncol(assort_days), with=FALSE])
+#NOTE: the total days in test are 111 b/c we account for the first and the last one
 
 total_days_train <- rowSums(assort_train[,4:ncol(assort_train), with = FALSE])
 total_days_test <- rowSums(assort_test[,4:ncol(assort_test), with=FALSE])
@@ -159,12 +161,12 @@ master_test[,avg_sales_per_day := total_quantity/days_in_assort]
 
 
 ## Add store variables to master table (note. promo_group not included since it's changing)
-#stores <- readRDS("stores.RData")
+stores <- readRDS("stores.RData")
 #stores = readRDS("/home/didi/BGSE/semester3/kernel/data/stores.RData")
 
 #removing date and promo_group
-#stores[,c("date","promo_group") := list(NULL, NULL)]
-#stores <- unique(stores) #3326
+stores[,c("date","promo_group") := list(NULL, NULL)]
+stores <- unique(stores) #3326
 #check if there are any stores in master table that are not in stores table
 length(setdiff(master_test$storeID, stores$storeID)) #No
 master_test <- merge(master_test, stores, by="storeID")
@@ -172,7 +174,7 @@ master_test <- merge(master_test, stores, by="storeID")
 ## Add province and autonomous community data. NB we only have around 2 thirds of the stores here, so we have ~106865 NA's
 regions <- readRDS("province.RData")
 #regions <- readRDS("/home/didi/BGSE/semester3/kernel/data/province.RData")
-#regions <- unique(regions) #1781
+regions <- unique(regions) #1781
 # find storeID's common to both master table and regions table
 stores_used  <- intersect(regions$ipdv, master_test$storeID) #ipdv==storeID
 regions      <- regions[ipdv %in% stores_used]
@@ -181,12 +183,46 @@ length(setdiff(regions$ipdv, master_test$storeID)) #correct
 master_test <- merge(master_test, regions, by.x="storeID", by.y="ipdv", all=TRUE)
 
 ## Add product variables to master table
-#products <- readRDS("products.RData")
+products <- readRDS("products.RData")
 #products <- readRDS("/home/didi/BGSE/semester3/kernel/data/products.RData")
-#products[,c("iniDate", "endDate") := list(NULL, NULL)]
-#products <- unique(products) # doesn't change anything. Already unique.
+products[,c("iniDate", "endDate") := list(NULL, NULL)]
+products <- unique(products) # doesn't change anything. Already unique.
 #check there are no products in master table that are not in products table
 length(setdiff(master_test$productID, products$productID)) #No
 master_test <- merge(master_test, products, by="productID")
 
 saveRDS(master_test, "master_test.RData")
+
+####################################################################################################
+############################## Check ##############################################################
+####################################################################################################
+# are there in assortment zero sales 
+master_test = readRDS("master_test.RData")
+master_train = readRDS("master_train.RData")
+
+nrow(master_test[total_quantity==0])
+nrow(master_train[total_quantity==0])
+
+#No such products
+
+# are there zero days in assortment
+nrow(master_train[days_in_assort==0])  #32076
+nrow(master_test[days_in_assort==0]) #213
+
+#Yes
+# we need to clean them, so we take those rows in master tables which are above 5 days 
+# in this way we loose around 14% in the training data
+# and lee than a percent in the test data 
+(nrow(master_train) - nrow(master_train[days_in_assort>5]))/nrow(master_train) 
+(nrow(master_test) - nrow(master_test[days_in_assort>5]))/nrow(master_test)
+
+# subset it in to match the assort_day
+master_train = master_train[days_in_assort>5]
+master_test = master_test[days_in_assort>5]
+
+saveRDS(master_test, "master_test.RData")
+saveRDS(master_train, "master_train.RData")
+
+
+
+
