@@ -1,4 +1,6 @@
 setwd("/media/balint/Storage/Tanulas/thesis/product-variety-optimisation")
+#setwd("~/Desktop/BGSE/Term3/MasterProject/GSE")
+
 library(data.table)
 
 #creating aggregation by product
@@ -43,8 +45,8 @@ sales <- readRDS("sales.RData")
 products <- products[products$productID %in% sales$productID,]
 #summary information about products
 prod <- product_timeline[,.(min = min(market_size), avg = mean(market_size),
-                            max = max(market_size), firstweek = sum(head(market_size),7),
-                            lastweek = sum(tail(market_size),7)), by=.(productID)]
+                            max = max(market_size), firstweek = sum(head(market_size, 7)),
+                            lastweek = sum(tail(market_size,7)), by=.(productID)]
 
 #introducing availability variable,
 #a factor telling about the time structure of the availability of the product
@@ -77,9 +79,10 @@ saveRDS(products, file= "products.RData")
 #CREATING AND SAVING ASSORTMENT_CHANGE TABLE,
 #which is 1 when a product is introduced to a store,
 #-1 when taken out, and 0 otherwise
-product_store_timeline <- readRDS("product_store_timeline.RData")
+product_store_timeline <- as.data.frame(readRDS("product_store_timeline.RData"))
 assortment_change <- product_store_timeline[, -4]
 for(i in 4:440){
+    #cat(i)
     assortment_change[,i] <- product_store_timeline[,i+1]-product_store_timeline[,i]
 }
 saveRDS(assortment_change, file="assortment_change.RData")
