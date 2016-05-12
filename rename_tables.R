@@ -14,7 +14,7 @@ names(sales)<-c("productID","storeID","quantity_sold_kg","date")
 saveRDS(sales,"sales.RData")
 
 # Product Table
-products <- readRDS("skuClean.RData")
+products <- readRDS("skuClean2.RData")
 names(products)[1]<- c("productID")
 saveRDS(products, "products.RData")
 
@@ -41,3 +41,5 @@ for(i in 1:length(file.names)){
   # save the new file
   saveRDS(file,new.name.extension)
 }
+
+
