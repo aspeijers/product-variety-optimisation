@@ -1,7 +1,8 @@
 ### Libraries
 library(data.table)
 
-setwd("~/BGSE/semester3/kernel/data")
+#setwd("~/BGSE/semester3/kernel/data")
+setwd("~/Desktop/BGSE/Term3/MasterProject/GSE")
 
 ### Tables
 flavor_data<-readRDS("skuFlavor.RData")
@@ -17,24 +18,13 @@ names(products)[1]<- c("productID")
 # combine both of them 
 products <- merge(products, flavor_data, by.x="productID", by.y="productID", all=TRUE)
 
-# change the measure units in the weight column
+# change the units of measure in the weight column
 products[,weights_kg := weight/1000]
 products[,weight := NULL]
 
-# add the column for availability 
-
-###############################################################################
-# if you haven't overwritten the product data then this bit is not necessary
-# you just need to merge the old products with the created one here
-products_old <- readRDS("products.RData")
-products_old[order(productID)]
-products[order(productID)]
-products[,availability := products_old$availability]
-
-saveRDS(products, file= "products.RData")
 
 ##############################################################################
-######### If not run this bit
+######### Add availability column
 #############################################################################
 #UPDATING THE PRODUCTS TABLE
 product_timeline <- readRDS("product_timeline.RData")
