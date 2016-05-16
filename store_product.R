@@ -66,7 +66,7 @@ saveRDS(store_product_half2,"/home/didi/BGSE/semester3/kernel/data/store_product
 
 #Calculating the mode
 #for the first half
-store_product_half[,mode_shelf_space := NA]
+store_product_half[,mode_shelf_space := NA_integer_]
 
 for(i in 200:nrow(store_product_half)){
   print(i)
@@ -76,7 +76,7 @@ for(i in 200:nrow(store_product_half)){
 } 
 
 # for the second half
-store_product_half2[,mode_shelf_space := NA]
+store_product_half2[,mode_shelf_space := NA_integer_]
 
 for(i in 1:nrow(store_product_half2)){
   print(i)
