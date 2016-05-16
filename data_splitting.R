@@ -1,7 +1,8 @@
 library(data.table)
 library(sampling)
 
-setwd("~/Desktop/BGSE/Term3/MasterProject/GSE")
+setwd("/media/balint/Storage/Tanulas/thesis/product-variety-optimisation")
+# setwd("~/Desktop/BGSE/Term3/MasterProject/GSE")
 
 ########################## Split by stores ###################################
 # # read in master table
@@ -79,6 +80,7 @@ assort_train <- assort_days[,1:(3+training_total_days-1), with=FALSE] #in order 
 # so actually the days are 328 not 329!!!! Because we don't count 2015-03-26 it is our benchmark
 assort_test <- cbind(assort_days[,.(storeID, productID, store_product_ID)], 
                      assort_days[,(3+training_total_days):ncol(assort_days), with=FALSE])
+rm(assort_days)
 #NOTE: the total days in test are 111 b/c we account for the first and the last one
 
 total_days_train <- rowSums(assort_train[,4:ncol(assort_train), with = FALSE])
@@ -222,7 +224,3 @@ master_test = master_test[days_in_assort>5]
 
 saveRDS(master_test, "master_test.RData")
 saveRDS(master_train, "master_train.RData")
-
-
-
-
