@@ -2,7 +2,7 @@ library(data.table)
 
 # path to the variety files 
 path = "/home/didi/BGSE/semester3/kernel/data/assortment/"
-# path = "~/Desktop/BGSE/Term3/MasterProject/GSE/old/assortment"
+# path = "~/Desktop/BGSE/Term3/MasterProject/GSE/assortment"
 #path = "/media/balint/Storage/Tanulas/thesis/product-variety-optimisation/assortment/"
 setwd(path)
 
@@ -12,7 +12,8 @@ file.names <- dir(path, pattern =".RData")
 file.names = file.names[-length(file.names)]
 
 store_product = readRDS("/home/didi/BGSE/semester3/kernel/data/product_store_timeline_total_days.RData") 
-store_product[,total_days:=NULL]
+#store_product = readRDS("../product_store_timeline_total_days.RData") 
+#store_product[,total_days:=NULL]
 
 #create temporary table through which to loop
 store_product_temp = store_product
@@ -52,19 +53,28 @@ Mode <- function(x) {
 ### Divide it into 2 parts for memory reasons
 n =nrow(store_product)
 # first part
-rm(store_product)
 store_product_half = store_product[1:(n/2),]
+rm(store_product)
 #total shelf space
-store_product_half[,total_shelf_space := rowSums(store_product_half[,5:441, with = FALSE])]
-store_product_half[,average_shelf_space := (total_shelf_space/total_days)]
-store_product_half[,mode_shelf_space := names(sort(-table((store_product_half[,5:441, with = FALSE]))))[1]]
+store_product_half[,total_shelf_space := rowSums(store_product_half[,5:442, with = FALSE])]
+#store_product_half[,average_shelf_space := (total_shelf_space/total_days)]
+#store_product_half[,mode_shelf_space := names(sort(-table((store_product_half[,5:442, with = FALSE]))))[1]]
+
 #second part
 store_product = readRDS("../store_product.RData")
-rm(store_product)
 store_product_half2 = store_product[((n/2)+1):n,]
+rm(store_product)
 #total shelf_space
-store_product_half2[,total_shelf_space := rowSums(store_product_half2[,5:441, with = FALSE])]
-store_product_half2[,average_shelf_space := (total_shelf_space/total_days)]
+store_product_half2[,total_shelf_space := rowSums(store_product_half2[,5:442, with = FALSE])]
+#store_product_half2[,average_shelf_space := (total_shelf_space/total_days)]
+store_product_half2[, mode_shelf_space := NA_integer_]
+
+for (i in 1:10) {
+    print(i)
+    row <- as.numeric(as.vector(store_product_half2[i,5:442, with=FALSE]))
+    mode <- unique(row)[which.max(tabulate(match(row, unique(row))))]
+    store_product_half2[i,mode_shelf_space := mode]
+}
 
 saveRDS(store_product_half2,"/home/didi/BGSE/semester3/kernel/data/store_product_hald2.RData")
 #read the first half

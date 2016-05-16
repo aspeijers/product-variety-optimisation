@@ -39,7 +39,6 @@ setwd("~/Desktop/BGSE/Term3/MasterProject/GSE")
 
 
 ########################## Find Time split ###################################
-# Note. This part of the code has not be run as of 3/5/2016
 products <- readRDS("products.RData")
 
 # subset products for alltimers
