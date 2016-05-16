@@ -60,7 +60,7 @@ store_product_half2 = store_product[((n/2)+1):n,]
 rm(store_product)
 #total shelf_space
 store_product_half2[,total_shelf_space := rowSums(store_product_half2[,5:442, with = FALSE])]
-saveRDS(store_product_half2,"/home/didi/BGSE/semester3/kernel/data/store_product_hald2.RData")
+saveRDS(store_product_half2,"/home/didi/BGSE/semester3/kernel/data/store_product_half2.RData")
 
 
 
