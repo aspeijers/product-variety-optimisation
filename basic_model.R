@@ -17,7 +17,19 @@ predict.basic <- function(master_test, master_train){
     master_train_avg_product <- master_train[,.(avg_sales_per_day = mean(avg_sales_per_day)), by =.(productID)]
     not_selled_in_training <- not_selled_in_training[master_train_avg_product, nomatch=0]
     pred <- data.frame(pred)
+    pred[is.na(pred$avg_sales_per_day), "present_in_train"] <- FALSE
+    pred[is.na(pred$present_in_train), "present_in_train"] <- TRUE
     pred[is.na(pred$avg_sales_per_day), "avg_sales_per_day"] <- not_selled_in_training[,avg_sales_per_day]
+
+    return(pred)
+}
+
+#This function uses averages by product for prediction.
+predict.avg <- function(master_test, master_train){
+    pred <- master_test[,.(productID, storeID)]
+    master_train_avg_product <- master_train[,.(avg_sales_per_day = mean(avg_sales_per_day)), by =.(productID)]
+    pred <- pred[master_train_avg_product, nomatch=0]
+    pred <- data.frame(pred)
 
     return(pred)
 }
@@ -25,8 +37,13 @@ predict.basic <- function(master_test, master_train){
 #this function 
 mse <- function(master_test, prediction){
     master_test <- data.frame(master_test)
-    sum((master_test$avg_sales_per_day-prediction$avg_sales_per_day)**2)/nrow(prediction)
+    sum((master_test$avg_sales_per_day - prediction$avg_sales_per_day)**2)/nrow(prediction)
 }
 
 prediction.basic <- predict.basic(master_test, master_train)
+prediction.avg <- predict.avg(master_test, master_train)
+
 mse(master_test, prediction.basic)
+mse(master_test, prediction.avg)
+mse(master_test[prediction.basic$present_in_train,], prediction.basic[prediction.basic$present_in_train,])
+mse(master_test[!prediction.basic$present_in_train,], prediction.basic[!prediction.basic$present_in_train,])
