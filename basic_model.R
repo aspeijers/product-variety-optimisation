@@ -25,7 +25,7 @@ predict.basic <- function(master_test, master_train){
 #this function 
 mse <- function(master_test, prediction){
     master_test <- data.frame(master_test)
-    sum((master_test$avg_sales_per_day-prediction$avg_sales_per_day)**2)
+    sum((master_test$avg_sales_per_day-prediction$avg_sales_per_day)**2)/nrow(prediction)
 }
 
 prediction.basic <- predict.basic(master_test, master_train)
