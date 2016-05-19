@@ -12,10 +12,9 @@ file.names <- dir(path, pattern =".RData")
 file.names = file.names[-length(file.names)]
 
 store_product = readRDS("/home/didi/BGSE/semester3/kernel/data/product_store_timeline_total_days.RData") 
-<<<<<<< HEAD
+
 #store_product = readRDS("../product_store_timeline_total_days.RData") 
-=======
->>>>>>> 62723a3c72a7e920065dfa5f0e9963e97b3d53d2
+
 #store_product[,total_days:=NULL]
 
 #create temporary table through which to loop
