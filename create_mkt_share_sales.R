@@ -72,7 +72,7 @@ master_test <- readRDS("master_test.RData")
 sales_test <- as.data.table(as.data.frame(master_test))
 rm(master_test)
 
-#sales_test[, c("avg_sales_store","mkt_product_store_sales","avg_sales_subFam","mkt_subFam_store_sales","avg_sales_Fam","mkt_Fam_store_sales","avg_sales_Grup","mkt_Grup_store_sales"):=NULL]
+#sales_test[, c("mkt_product_store_sales","mkt_subFam_store_sales","mkt_Fam_store_sales","mkt_Grup_store_sales"):=NULL]
 
 ########### Mkt share of product within each store (by sales)
 # create average sales per day per store
