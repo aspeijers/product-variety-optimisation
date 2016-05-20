@@ -35,15 +35,23 @@ predict.avg <- function(master_test, master_train){
 
     return(pred)
 }
+
 #Mean Square Error
 mse <- function(master_test, prediction){
     master_test <- data.frame(master_test)
     sum((master_test$avg_sales_per_day - prediction$avg_sales_per_day)**2)/nrow(prediction)
 }
-#Mean Absolute error 
+
+#Mean Absolute Error 
 mae <- function(master_test, prediction){
     master_test <- data.frame(master_test)
     sum(abs(master_test$avg_sales_per_day - prediction$avg_sales_per_day))/nrow(prediction)
+}
+
+#Mean Error 
+me <- function(master_test, prediction){
+    master_test <- data.frame(master_test)
+    sum(master_test$avg_sales_per_day - prediction$avg_sales_per_day)/nrow(prediction)
 }
 
 prediction.basic <- predict.basic(master_test, master_train)
@@ -53,6 +61,8 @@ mse(master_test, prediction.basic)
 mse(master_test, prediction.avg)
 mae(master_test, prediction.basic)
 mae(master_test, prediction.avg)
+me(master_test, prediction.basic)
+me(master_test, prediction.avg)
 mse(master_test[prediction.basic$present_in_train,], prediction.basic[prediction.basic$present_in_train,])
 mse(master_test[!prediction.basic$present_in_train,], prediction.basic[!prediction.basic$present_in_train,])
 mae(master_test[prediction.basic$present_in_train,], prediction.basic[prediction.basic$present_in_train,])
