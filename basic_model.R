@@ -67,3 +67,42 @@ mse(master_test[prediction.basic$present_in_train,], prediction.basic[prediction
 mse(master_test[!prediction.basic$present_in_train,], prediction.basic[!prediction.basic$present_in_train,])
 mae(master_test[prediction.basic$present_in_train,], prediction.basic[prediction.basic$present_in_train,])
 mae(master_test[!prediction.basic$present_in_train,], prediction.basic[!prediction.basic$present_in_train,])
+
+library(ggplot2)
+
+#this plotting function asks for an xvalue to split by
+#add xvalue as a string!
+plot.residuals <- function(master_test, prediction, xvalue, violin = FALSE, varwidth = FALSE){
+    master_test <- data.frame(master_test)
+    master_test$res <- master_test$avg_sales_per_day - prediction$avg_sales_per_day
+    limits <- sapply(split(master_test$res, master_test[,xvalue]), 
+                     function(x) boxplot.stats(x)$stats[c(1, 5)])
+    ylim1 = c(min(limits), max(limits))
+    p <- ggplot(master_test, aes_string(xvalue, "res")) +
+        coord_cartesian(ylim = ylim1*1.025) +
+        theme_bw() +
+        geom_hline(aes(yintercept=0), colour="#990000", linetype="dashed")
+    if(!violin & varwidth){
+        p <- p + geom_boxplot(varwidth = TRUE, outlier.size = 0)
+    }
+    if(!violin & !varwidth){
+        p <- p + geom_boxplot(varwidth = FALSE, outlier.size = 0)
+    }
+    if(violin & varwidth){
+        p <- p + geom_violin(scale = 'count')
+    }
+    if(violin & !varwidth){
+        p <- p + geom_violin()
+    }
+    p
+}
+
+#Look, how gorgeous! o.o
+plot.residuals(master_test, prediction.avg, "idComunidad")
+plot.residuals(master_test, prediction.avg, "idComunidad", varwidth = TRUE)
+plot.residuals(master_test, prediction.avg, "idComunidad", violin = TRUE)
+plot.residuals(master_test, prediction.avg, "idComunidad", violin = TRUE, varwidth = TRUE)
+
+#we should put this somewhere else
+master_test$chain <- as.factor(master_test$chain)
+master_test$town <- as.factor(master_test$town)
