@@ -8,18 +8,30 @@ master_train <- readRDS("master_train.RData")
 # and average sales by product where it was not sold before.
 # It uses data.table inputs, but the output is data.frame.
 predict.basic <- function(master_test, master_train){
+    
+    #create a pred table with the same size and same rows than master_test
     pred <- master_test[,.(productID, storeID)]
+    
+    #add the avg_sales_per_day to pred where they were present in master_train
     setkeyv(pred, c("productID", "storeID"))
     setkeyv(master_train, c("productID", "storeID"))
     pred <- merge(pred, master_train[, .(productID, storeID, avg_sales_per_day)], all.x=TRUE)
+    
+    #identify which product-store pairs are not present in master_train, but are in master_test
+    #these are the same pairs for which we could not find their match in the previous step
     not_sold_in_training <- data.table(productID = pred[is.na(avg_sales_per_day), productID])
+    
+    #for these 'not_sold_in_training' we provide the sales estimate based on average sales of the product in other stores
     setkey(not_sold_in_training, productID)
     master_train_avg_product <- master_train[,.(avg_sales_per_day = mean(avg_sales_per_day)), by =.(productID)]
-    not_sold_in_training <- not_sold_in_training[master_train_avg_product, nomatch=0]
+    not_sold_in_training <- not_sold_in_training[master_train_avg_product, nomatch=0] #this is an inner join, just with weird syntax
    
+    #we create the boolean variable 'present_in_train' to show this difference in estimation
     pred <- data.frame(pred)
     pred[is.na(pred$avg_sales_per_day), "present_in_train"] <- FALSE
     pred[is.na(pred$present_in_train), "present_in_train"] <- TRUE
+    
+    #final joining of the estimations
     pred[is.na(pred$avg_sales_per_day), "avg_sales_per_day"] <- not_sold_in_training[,avg_sales_per_day]
 
     return(pred)
