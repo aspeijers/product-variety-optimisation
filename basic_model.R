@@ -118,3 +118,21 @@ plot.residuals(master_test, prediction.avg, "idComunidad", violin = TRUE, varwid
 #we should put this somewhere else
 master_test$chain <- as.factor(master_test$chain)
 master_test$town <- as.factor(master_test$town)
+
+
+# SUGGEST VARIETY WITHOUT SUBSTITUTION EFFECTS PRESENT
+#this function outputs the top products for a given store
+suggest <- function(storeID, predict.function, variety.size, master_train){
+    
+    # 'storeID' tells in which store are we interested
+    # 'predict.function' is the function we would like to use
+    # 'variety.size' is is the number of products we want to sell in the store
+    # 'master_train' is the training data we want to feed in for 'predict.function'
+    products <- data.table(storeID = storeID, productID = unique(master_train[,productID]))
+    prediction <- predict.function(products, master_train)
+    #sort it by descending order
+    prediction <- prediction[order(-prediction$avg_sales_per_day),]
+    head(prediction, variety.size)
+    
+}
+suggest(1013, predict.basic, 10, master_train)
