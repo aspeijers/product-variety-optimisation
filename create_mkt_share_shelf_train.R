@@ -42,7 +42,7 @@ shelf_train_bystore <- shelf_train_bystore[,lapply(.SD, sum), by=storeID]
 #shelf_test_bystore <- shelf_test_bystore[,lapply(.SD, sum), by=storeID]
 
 for (i in 1:nrow(shelf_train_bystore)) {
-    print(".")
+    print(i)
     row <- as.numeric(as.vector(shelf_train_bystore[i,2:ncol(shelf_train_bystore), with=FALSE]))
     mode <- unique(row)[which.max(tabulate(match(row, unique(row))))]
     shelf_train_bystore[i,mode_store := mode]
@@ -150,6 +150,81 @@ shelf_train <- merge(shelf_train, shelf_train_byGrup, by=c("storeID","grup"), al
 rm(shelf_train_byGrup)
 shelf_train<- shelf_train[,mkt_Grup_store:=mode_Grup_store/mode_store]
 saveRDS(shelf_train,"shelf_train.RData")
+
+########################### Flavor STORE
+
+
+# sum shelf_space for each store on each day
+#add flavor to each productID if necessary
+products = readRDS("products.RData")
+products = products[,.(productID,flavor,type)]
+shelf_train = merge(shelf_train,products, by = "productID", all.x=TRUE)
+rm(products)
+
+shelf_train_byFlavor <- as.data.table(as.data.frame(shelf_train))
+
+
+columns <- c("productID", "total_days", "store_product_ID", "total_shelf_space", 
+             "mode_shelf_space","mode_store","mkt_product_store","subFam","fam",
+             "mkt_subFam_store","mkt_Fam_store","mkt_Grup_store","type")
+shelf_train_byFlavor <- shelf_train_byFlavor[,columns:= NULL, with=FALSE]
+shelf_train_byFlavor <- shelf_train_byFlavor[,lapply(.SD, sum), by=.(flavor,storeID)]
+
+for (i in 1:nrow(shelf_train_byFlavor)) {
+    print(i)
+    row <- as.numeric(as.vector(shelf_train_byFlavor[i,3:ncol(shelf_train_byFlavor), with=FALSE]))
+    mode <- unique(row)[which.max(tabulate(match(row, unique(row))))]
+    shelf_train_byFlavor[i,mode_Flavor_store := mode]
+}
+
+saveRDS(shelf_train_byGrup,"shelf_train_byGrup.RData")
+saveRDS(shelf_train,"shelf_train.RData")
+
+# merge these values to shelf space data.tables
+shelf_train_byFlavor <- shelf_train_byFlavor[,.(storeID, mode_Flavor_store, flavor)]
+shelf_train <- merge(shelf_train, shelf_train_byFlavor, by=c("storeID","flavor"), all.x = TRUE)
+#remove unnecessary table
+rm(shelf_train_byFlavor)
+shelf_train<- shelf_train[,mkt_Flavor_store:=mode_Flavor_store/mode_store]
+saveRDS(shelf_train,"shelf_train_mode_flavor.RData")
+
+########################### Type STORE
+
+
+# sum shelf_space for each store on each day
+#add flavor to each productID if necessary
+# products = readRDS("products.RData")
+# products = products[,.(productID,flavor,type)]
+# shelf_train = merge(shelf_train,products, by = "productID", all.x=TRUE)
+# rm(products)
+
+shelf_train_byType <- as.data.table(as.data.frame(shelf_train))
+
+
+columns <- c("productID", "total_days", "store_product_ID", "total_shelf_space", 
+             "mode_shelf_space","mode_store","mkt_product_store","subFam","fam",
+             "mkt_subFam_store","mkt_Fam_store","mkt_Grup_store","flavor","mkt_Flavor_store")
+shelf_train_byType <- shelf_train_byType[,columns:= NULL, with=FALSE]
+shelf_train_byType <- shelf_train_byType[,lapply(.SD, sum), by=.(type,storeID)]
+
+for (i in 1:nrow(shelf_train_byType)) {
+    print(i)
+    row <- as.numeric(as.vector(shelf_train_byType[i,3:ncol(shelf_train_byType), with=FALSE]))
+    mode <- unique(row)[which.max(tabulate(match(row, unique(row))))]
+    shelf_train_byType[i,mode_Type_store := mode]
+}
+
+#saveRDS(shelf_train_byGrup,"shelf_train_byGrup.RData")
+#saveRDS(shelf_train,"shelf_train.RData")
+
+# merge these values to shelf space data.tables
+shelf_train_byType <- shelf_train_byType[,.(storeID, mode_Type_store, type)]
+shelf_train <- merge(shelf_train, shelf_train_byType, by=c("storeID","type"), all.x = TRUE)
+#remove unnecessary table
+rm(shelf_train_byType)
+shelf_train<- shelf_train[,mkt_Type_store:=mode_Type_store/mode_store]
+saveRDS(shelf_train,"shelf_train_mode_Type.RData")
+
 
 #########################################
 ### MERGE WITH THE MASTER TRAIN TABLE
