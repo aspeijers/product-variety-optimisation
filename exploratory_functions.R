@@ -2,6 +2,7 @@ setwd("/media/balint/Storage/Tanulas/thesis/product-variety-optimisation")
 library(data.table)
 
 #CREATING sales_by_month
+#this part takes a few minutes to run
 sales <- readRDS("sales.RData")
 sales$month <- strftime(sales$date,format="%Y-%m")
 sales_by_month <- sales[,.(quantity_sold_kg = sum(quantity_sold_kg)), by=.(productID, storeID, month)]
@@ -51,6 +52,11 @@ plotsales <- function(id_pairs, plot_by, sales_by_month){
 
 #stacked barplot
 library(ggplot2)
-ggplot(DF1, aes(x = Rank, y = value, fill = variable)) + 
-    geom_bar(stat = "identity")
+library(data.table)
+master_table <- readRDS("master_table.RData")
+master_table$chain <- as.factor(master_table$chain)
+master_table$sub_chain <- as.factor(master_table$sub_chain)
+
+ggplot(master_table, aes(x = chain, y = total_quantity, fill=sub_chain, group=sub_chain)) + 
+    geom_bar(stat = "summary", fun.y=sum)
 #
