@@ -3,7 +3,7 @@ setwd("~/Desktop/BGSE/Term3/MasterProject/GSE")
 library(data.table)
 
 ############################### TRAIN ##########################################
-master_train <- readRDS("master_train.RData")
+master_train <- readRDS("master_train_mktshare.RData")
 sales_train <- as.data.table(as.data.frame(master_train))
 rm(master_train)
 
@@ -61,14 +61,40 @@ sales_train<- sales_train[,mkt_Grup_store_sales:=avg_sales_Grup/avg_sales_store]
 
 rm(sales_train_byGrup)
 
+########### Mkt share of Flavor within each store (by sales)
+# create average sales per day per store
+sales_train_byFlavor <- sales_train[,.(storeID, flavor, total_quantity, days_in_assort)]
+sales_train_byFlavor <- sales_train_byFlavor[,lapply(.SD, sum), by=.(storeID, flavor)]
+sales_train_byFlavor <- sales_train_byFlavor[,avg_sales_Flavor:= total_quantity/days_in_assort]
+
+# merge this back into the sales_train table
+sales_train_byFlavor <- sales_train_byFlavor[,.(storeID, flavor, avg_sales_Flavor)]
+sales_train <- merge(sales_train, sales_train_byFlavor, by=c("storeID","flavor"), all.x = TRUE)
+sales_train<- sales_train[,mkt_Flavor_store_sales:=avg_sales_Flavor/avg_sales_store]
+
+rm(sales_train_byFlavor)
+
+########### Mkt share of Type within each store (by sales)
+# create average sales per day per store
+sales_train_byType <- sales_train[,.(storeID, type, total_quantity, days_in_assort)]
+sales_train_byType <- sales_train_byType[,lapply(.SD, sum), by=.(storeID, type)]
+sales_train_byType <- sales_train_byType[,avg_sales_Type:= total_quantity/days_in_assort]
+
+# merge this back into the sales_train table
+sales_train_byType <- sales_train_byType[,.(storeID, type, avg_sales_Type)]
+sales_train <- merge(sales_train, sales_train_byType, by=c("storeID","type"), all.x = TRUE)
+sales_train<- sales_train[,mkt_Type_store_sales:=avg_sales_Type/avg_sales_store]
+
+rm(sales_train_byType)
+
 ########### remove unnecessary columns
-sales_train[,c("avg_sales_store", "avg_sales_subFam", "avg_sales_Fam", "avg_sales_Grup"):=NULL]
+sales_train[,c("avg_sales_store", "avg_sales_subFam", "avg_sales_Fam", "avg_sales_Grup", "avg_sales_Flavor", "avg_sales_Type"):=NULL]
 
 ########### write file
-saveRDS(sales_train, "master_train.RData")
+saveRDS(sales_train, "master_train_mktshare.RData")
 
 ################################ TEST ##########################################
-master_test <- readRDS("master_test.RData")
+master_test <- readRDS("master_test_mktshare.RData")
 sales_test <- as.data.table(as.data.frame(master_test))
 rm(master_test)
 
@@ -126,8 +152,34 @@ sales_test<- sales_test[,mkt_Grup_store_sales:=avg_sales_Grup/avg_sales_store]
 
 rm(sales_test_byGrup)
 
+########### Mkt share of Flavor within each store (by sales)
+# create average sales per day per store
+sales_test_byFlavor <- sales_test[,.(storeID, flavor, total_quantity, days_in_assort)]
+sales_test_byFlavor <- sales_test_byFlavor[,lapply(.SD, sum), by=.(storeID, flavor)]
+sales_test_byFlavor <- sales_test_byFlavor[,avg_sales_Flavor:= total_quantity/days_in_assort]
+
+# merge this back into the sales_test table
+sales_test_byFlavor <- sales_test_byFlavor[,.(storeID, flavor, avg_sales_Flavor)]
+sales_test <- merge(sales_test, sales_test_byFlavor, by=c("storeID","flavor"), all.x = TRUE)
+sales_test<- sales_test[,mkt_Flavor_store_sales:=avg_sales_Flavor/avg_sales_store]
+
+rm(sales_test_byFlavor)
+
+########### Mkt share of Type within each store (by sales)
+# create average sales per day per store
+sales_test_byType <- sales_test[,.(storeID, type, total_quantity, days_in_assort)]
+sales_test_byType <- sales_test_byType[,lapply(.SD, sum), by=.(storeID, type)]
+sales_test_byType <- sales_test_byType[,avg_sales_Type:= total_quantity/days_in_assort]
+
+# merge this back into the sales_test table
+sales_test_byType <- sales_test_byType[,.(storeID, type, avg_sales_Type)]
+sales_test <- merge(sales_test, sales_test_byType, by=c("storeID","type"), all.x = TRUE)
+sales_test<- sales_test[,mkt_Type_store_sales:=avg_sales_Type/avg_sales_store]
+
+rm(sales_test_byType)
+
 ########### remove unnecessary columns
-sales_test[,c("avg_sales_store", "avg_sales_subFam", "avg_sales_Fam", "avg_sales_Grup"):=NULL]
+sales_test[,c("avg_sales_store", "avg_sales_subFam", "avg_sales_Fam", "avg_sales_Grup", "avg_sales_Flavor", "avg_sales_Type"):=NULL]
 
 ########### write file
-saveRDS(sales_test, "master_test.RData")
+saveRDS(sales_test, "master_test_mktshare.RData")

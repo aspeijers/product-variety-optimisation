@@ -1,3 +1,5 @@
+## !!!!!!! Somewhere in here we are duplicating 18 rows (possibly multiple times)
+
 # 1. split store_product data into train and test (based on time) 
 # 3. then compute the mode for each
 
@@ -234,8 +236,8 @@ saveRDS(shelf_train,"shelf_train_mode_Type.RData")
 ## leave only the necessary columns
 shelf_train = shelf_train[,.(storeID, productID,total_shelf_space,mode_shelf_space,mkt_product_store,mkt_subFam_store,
                              mkt_Fam_store,mkt_Grup_store)]
-master_train = readRDS("master_train.RData")
+master_train = readRDS("master_train_datasplitting.RData")
 
 master_train = merge(x = master_train,y = shelf_train,by=c("storeID","productID"), all.x=TRUE)
-saveRDS(master_train,"master_train.RData")
+saveRDS(master_train,"master_train_mktshare.RData")
 
