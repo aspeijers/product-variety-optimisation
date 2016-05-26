@@ -1,4 +1,5 @@
 ## !!!!!!!! Somewhere in here we are duplicating 18 rows (possibly multiple times)
+## !!!!!!! Also should the mode loop be starting at col 3 instead of 2?
 
 # 1. split store_product data into train and test (based on time) 
 # 2. then compute the mode for each
@@ -42,7 +43,7 @@ shelf_test_bystore <- shelf_test_bystore[,columns:=NULL, with=FALSE]
 shelf_test_bystore <- shelf_test_bystore[,lapply(.SD, sum), by=storeID]
 
 for (i in 1:nrow(shelf_test_bystore)) {
-    print(".")
+    print(i)
     row <- as.numeric(as.vector(shelf_test_bystore[i,2:ncol(shelf_test_bystore), with=FALSE]))
     mode <- unique(row)[which.max(tabulate(match(row, unique(row))))]
     shelf_test_bystore[i,mode_store := mode]
@@ -59,7 +60,7 @@ rm(shelf_test_bystore)
 
 ################# match subFam, Fam and group to shelf space table #############
 products <- readRDS("products.RData")
-products <- products[,.(productID, subFam, fam, grup, flavor, type)]
+products <- products[,.(productID, subFam, fam, grup, flavor, type, units)]
 shelf_test <- merge(shelf_test, products, by="productID", all.x=TRUE)
 
 ############################ SUBFAM STORE 
@@ -68,7 +69,7 @@ shelf_test <- merge(shelf_test, products, by="productID", all.x=TRUE)
 shelf_test_bysubFam <- as.data.table(as.data.frame(shelf_test))
 
 columns <- c("productID", "total_days", "store_product_ID", "total_shelf_space", 
-             "mode_shelf_space","mode_store","mkt_product_store","fam","grup","flavor", "type")
+             "mode_shelf_space","mode_store","mkt_product_store","fam","grup","flavor", "type", "units")
 shelf_test_bysubFam <- shelf_test_bysubFam[,columns:= NULL, with=FALSE]
 shelf_test_bysubFam <- shelf_test_bysubFam[,lapply(.SD, sum), by=.(subFam,storeID)]
 
@@ -98,7 +99,7 @@ shelf_test<- shelf_test[,mkt_subFam_store:=mode_subFam_store/mode_store]
 shelf_test_byFam <- as.data.table(as.data.frame(shelf_test))
 
 columns <- c("productID", "total_days", "store_product_ID", "total_shelf_space", 
-             "mode_shelf_space","mode_store","mkt_product_store","subFam","grup","flavor", "type","mkt_subFam_store")
+             "mode_shelf_space","mode_store","mkt_product_store","subFam","grup","flavor", "type","units", "mkt_subFam_store")
 shelf_test_byFam <- shelf_test_byFam[,columns:= NULL, with=FALSE]
 shelf_test_byFam <- shelf_test_byFam[,lapply(.SD, sum), by=.(fam,storeID)]
 
@@ -126,7 +127,7 @@ shelf_test<- shelf_test[,mkt_Fam_store:=mode_Fam_store/mode_store]
 shelf_test_byGrup <- as.data.table(as.data.frame(shelf_test))
 
 columns <- c("productID", "total_days", "store_product_ID", "total_shelf_space", 
-             "mode_shelf_space","mode_store","mkt_product_store","subFam","fam", "flavor", "type", "mkt_subFam_store","mkt_Fam_store")
+             "mode_shelf_space","mode_store","mkt_product_store","subFam","fam", "flavor", "type", "units", "mkt_subFam_store","mkt_Fam_store")
 shelf_test_byGrup <- shelf_test_byGrup[,columns:= NULL, with=FALSE]
 shelf_test_byGrup <- shelf_test_byGrup[,lapply(.SD, sum), by=.(grup,storeID)]
 
@@ -155,7 +156,7 @@ saveRDS(shelf_test,"shelf_test.RData")
 shelf_test_byFlavor <- as.data.table(as.data.frame(shelf_test))
 
 columns <- c("productID", "total_days", "store_product_ID", "total_shelf_space", 
-             "mode_shelf_space","mode_store","mkt_product_store","subFam","fam", "grup", "type", "mkt_subFam_store","mkt_Fam_store", "mkt_Grup_store")
+             "mode_shelf_space","mode_store","mkt_product_store","subFam","fam", "grup", "type", "units", "mkt_subFam_store","mkt_Fam_store", "mkt_Grup_store")
 shelf_test_byFlavor <- shelf_test_byFlavor[,columns:= NULL, with=FALSE]
 shelf_test_byFlavor <- shelf_test_byFlavor[,lapply(.SD, sum), by=.(flavor,storeID)]
 
@@ -185,7 +186,10 @@ saveRDS(shelf_test,"shelf_test.RData")
 shelf_test_byType <- as.data.table(as.data.frame(shelf_test))
 
 columns <- c("productID", "total_days", "store_product_ID", "total_shelf_space", 
-             "mode_shelf_space","mode_store","mkt_product_store","subFam","fam", "grup", "flavor", "mkt_subFam_store","mkt_Fam_store", "mkt_Grup_store")
+             "mode_shelf_space","mode_store","mkt_product_store","subFam","fam", 
+             "grup", "flavor", "units", "mkt_subFam_store","mkt_Fam_store", 
+             "mkt_Grup_store", "mkt_Flavor_store")
+
 shelf_test_byType <- shelf_test_byType[,columns:= NULL, with=FALSE]
 shelf_test_byType <- shelf_test_byType[,lapply(.SD, sum), by=.(type,storeID)]
 
@@ -207,6 +211,37 @@ rm(shelf_test_byType)
 shelf_test<- shelf_test[,mkt_Type_store:=mode_Type_store/mode_store]
 saveRDS(shelf_test,"shelf_test.RData")
 
+########################### Units STORE
+
+
+# sum shelf_space for each store on each day
+shelf_test_byUnits <- as.data.table(as.data.frame(shelf_test))
+
+columns <- c("productID", "total_days", "store_product_ID", "total_shelf_space", 
+             "mode_shelf_space","mode_store","mkt_product_store","subFam","fam", 
+             "grup", "flavor", "type", "mkt_subFam_store","mkt_Fam_store", 
+             "mkt_Grup_store", "mkt_Flavor_store", "mkt_Type_store")
+
+shelf_test_byUnits <- shelf_test_byUnits[,columns:= NULL, with=FALSE]
+shelf_test_byUnits <- shelf_test_byUnits[,lapply(.SD, sum), by=.(units,storeID)]
+
+for (i in 1:nrow(shelf_test_byUnits)) {
+    print(i)
+    row <- as.numeric(as.vector(shelf_test_byUnits[i,2:ncol(shelf_test_byUnits), with=FALSE]))
+    mode <- unique(row)[which.max(tabulate(match(row, unique(row))))]
+    shelf_test_byUnits[i,mode_Units_store := mode]
+}
+
+saveRDS(shelf_test_byUnits,"shelf_test_byUnits.RData")
+saveRDS(shelf_test,"shelf_test.RData")
+
+# merge these values to shelf space data.tables
+shelf_test_byUnits <- shelf_test_byUnits[,.(storeID, mode_Units_store, units)]
+shelf_test <- merge(shelf_test, shelf_test_byUnits, by=c("storeID","units"), all.x = TRUE)
+#remove unnecessary table
+rm(shelf_test_byUnits)
+shelf_test<- shelf_test[,mkt_Units_store:=mode_Units_store/mode_store]
+saveRDS(shelf_test,"shelf_test.RData")
 
 #########################################
 ### MERGE WITH THE MASTER TRAIN TABLE
@@ -215,7 +250,7 @@ saveRDS(shelf_test,"shelf_test.RData")
 
 ## leave only the necessary columns
 shelf_test <- shelf_test[,.(storeID, productID, total_shelf_space, mode_shelf_space, mkt_product_store, mkt_subFam_store,
-                             mkt_Fam_store, mkt_Grup_store, mkt_Flavor_store, mkt_Type_store)]
+                             mkt_Fam_store, mkt_Grup_store, mkt_Flavor_store, mkt_Type_store, mkt_Units_store)]
 master_test <- readRDS("master_test_datasplitting.RData")
 
 master_test <- merge(x = master_test,y = shelf_test, by=c("storeID","productID"), all.x=TRUE)

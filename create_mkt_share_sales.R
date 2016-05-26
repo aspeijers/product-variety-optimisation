@@ -87,8 +87,22 @@ sales_train<- sales_train[,mkt_Type_store_sales:=avg_sales_Type/avg_sales_store]
 
 rm(sales_train_byType)
 
+########### Mkt share of Units within each store (by sales)
+# create average sales per day per store
+sales_train_byUnits <- sales_train[,.(storeID, units, total_quantity, days_in_assort)]
+sales_train_byUnits <- sales_train_byUnits[,lapply(.SD, sum), by=.(storeID, units)]
+sales_train_byUnits <- sales_train_byUnits[,avg_sales_Units:= total_quantity/days_in_assort]
+
+# merge this back into the sales_train table
+sales_train_byUnits <- sales_train_byUnits[,.(storeID, units, avg_sales_Units)]
+sales_train <- merge(sales_train, sales_train_byUnits, by=c("storeID","units"), all.x = TRUE)
+sales_train<- sales_train[,mkt_Units_store_sales:=avg_sales_Units/avg_sales_store]
+
+rm(sales_train_byUnits)
+
 ########### remove unnecessary columns
-sales_train[,c("avg_sales_store", "avg_sales_subFam", "avg_sales_Fam", "avg_sales_Grup", "avg_sales_Flavor", "avg_sales_Type"):=NULL]
+sales_train[,c("avg_sales_store", "avg_sales_subFam", "avg_sales_Fam", 
+               "avg_sales_Grup", "avg_sales_Flavor", "avg_sales_Type", "avg_sales_Units"):=NULL]
 
 ########### write file
 saveRDS(sales_train, "master_train_mktshare.RData")
@@ -178,8 +192,22 @@ sales_test<- sales_test[,mkt_Type_store_sales:=avg_sales_Type/avg_sales_store]
 
 rm(sales_test_byType)
 
+########### Mkt share of Units within each store (by sales)
+# create average sales per day per store
+sales_test_byUnits <- sales_test[,.(storeID, units, total_quantity, days_in_assort)]
+sales_test_byUnits <- sales_test_byUnits[,lapply(.SD, sum), by=.(storeID, units)]
+sales_test_byUnits <- sales_test_byUnits[,avg_sales_Units:= total_quantity/days_in_assort]
+
+# merge this back into the sales_test table
+sales_test_byUnits <- sales_test_byUnits[,.(storeID, units, avg_sales_Units)]
+sales_test <- merge(sales_test, sales_test_byUnits, by=c("storeID","units"), all.x = TRUE)
+sales_test<- sales_test[,mkt_Units_store_sales:=avg_sales_Units/avg_sales_store]
+
+rm(sales_test_byUnits)
+
 ########### remove unnecessary columns
-sales_test[,c("avg_sales_store", "avg_sales_subFam", "avg_sales_Fam", "avg_sales_Grup", "avg_sales_Flavor", "avg_sales_Type"):=NULL]
+sales_test[,c("avg_sales_store", "avg_sales_subFam", "avg_sales_Fam", "avg_sales_Grup", 
+              "avg_sales_Flavor", "avg_sales_Type", "avg_sales_Units"):=NULL]
 
 ########### write file
 saveRDS(sales_test, "master_test_mktshare.RData")
