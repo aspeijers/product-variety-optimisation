@@ -465,18 +465,18 @@ plot(1:20, wss, type="b", xlab="Number of Clusters",
 
 
 # K-Means Cluster Analysis
-fit <- kmeans(stores_dummies_scaled, 6) 
+fit <- kmeans(stores_dummies, 6) 
 # get cluster means 
-aggregate(stores_dummies_scaled,by=list(fit$cluster),FUN=mean)
+centroids <- aggregate(stores_dummies,by=list(fit$cluster),FUN=mean)
 # append cluster assignment
-mydata <- data.frame(stores_dummies_scaled, fit$cluster)
+mydata <- data.frame(stores_dummies, fit$cluster)
 
 # append store ID
 store_cluster <- cbind(storeIDs, mydata)
 storeID_cluster <- store_cluster[,c("storeIDs", "fit.cluster")]
 names(storeID_cluster)[1] <- "storeID"
 
-saveRDS(storeID_cluster, "storeID_cluster_mktshare.RData")
+saveRDS(storeID_cluster, "storeID_cluster_mktshare_sales.RData")
 
 #### Hirarchical 
 ### LOOK AT THE METHOD WARD?
