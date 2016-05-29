@@ -68,6 +68,7 @@ sales <- readRDS("sales.RData")
 events <- readRDS("events.RData")
 product_store_timeline <- readRDS("product_store_timeline.RData")
 product_store_timeline[, c("20150201") := get("20150131")]
+
 diffindiff <- function(treatment_product, inspected_product, days_window, introduction,
                        events, sales, product_store_timeline){
     
@@ -102,7 +103,7 @@ diffindiff <- function(treatment_product, inspected_product, days_window, introd
     relevant_events$salesbefore <- NA
     relevant_events$salesratio <- NA
     for(i in 1:nrow(relevant_events)){
-        cat[i]
+        cat(i)
         relevant_events$salesbefore[i] <- sum(sales[storeID == relevant_events$storeID[i] &
                                                  productID == inspected_product &
                                                  date < relevant_events$date[i] &
@@ -116,6 +117,8 @@ diffindiff <- function(treatment_product, inspected_product, days_window, introd
     relevant_events$salesratio <- relevant_events$salesafter/relevant_events$salesbefore
     return(relevant_events)
 }
+
+#trying
 did1a <-diffindiff("G01F04S12S01", "G01F01S01S01", 16, introduction = TRUE,
            events = events, sales = sales, product_store_timeline = product_store_timeline)
 did1b <-diffindiff("G01F04S12S01", "G01F01S01S01", 16, introduction = FALSE,
@@ -128,4 +131,21 @@ did3a <-diffindiff("G19F03S02S02", "G01F01S01S01", 16, introduction = TRUE,
                   events = events, sales = sales, product_store_timeline = product_store_timeline)
 did3b <-diffindiff("G19F03S02S02", "G01F01S01S01", 16, introduction = FALSE,
                   events = events, sales = sales, product_store_timeline = product_store_timeline)
-plot(density(relevant_events$salesratio))
+plot(density(did1a$salesratio, na.rm=TRUE))
+plot(density(did1b$salesratio, na.rm=TRUE))
+plot(density(did2a$salesratio, na.rm=TRUE))
+plot(density(did2b$salesratio, na.rm=TRUE))
+plot(density(did3a$salesratio, na.rm=TRUE))
+plot(density(did3b$salesratio, na.rm=TRUE))
+median(did1a$salesratio, na.rm=TRUE)
+median(did1b$salesratio, na.rm=TRUE)
+median(did2a$salesratio, na.rm=TRUE)
+median(did2b$salesratio, na.rm=TRUE)
+median(did3a$salesratio, na.rm=TRUE)
+median(did3b$salesratio, na.rm=TRUE)
+saveRDS(did1a, "did1a.RData")
+saveRDS(did1b, "did1b.RData")
+saveRDS(did2a, "did2a.RData")
+saveRDS(did2b, "did2b.RData")
+saveRDS(did3a, "did3a.RData")
+saveRDS(did3b, "did3b.RData")
