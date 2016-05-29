@@ -1,4 +1,8 @@
 setwd("/media/balint/Storage/Tanulas/thesis/product-variety-optimisation")
+# this should be put somewhere else
+# product_store_timeline <- readRDS("product_store_timeline.RData")
+# product_store_timeline[, c("20150201") := get("20150131")]
+
 
 #CREATING THE EVENTS TABLE
 #it shows when were products introduced or taken out from specific store
@@ -66,32 +70,32 @@ ggplot(sales_daily, aes(x=date, y=quantity_sold_kg)) +
 library(data.table)
 sales <- readRDS("sales.RData")
 events <- readRDS("events.RData")
-product_store_timeline <- readRDS("product_store_timeline.RData")
-product_store_timeline[, c("20150201") := get("20150131")]
+events$date <- as.Date(events$date, "%Y%m%d")
+setkeyv(sales, c("productID", "storeID", "date"))
 
 diffindiff <- function(treatment_product, inspected_product, days_window, introduction,
-                       events, sales, product_store_timeline){
+                       events, sales){
     
     relevant_events <- events[events$productID==treatment_product & events$begin==introduction &
                                   events[, inspected_product], 1:4]
     cat("relevant events found\n")
-    relevant_events$date <- as.Date(relevant_events$date, "%Y%m%d")
     relevant_events$enoughdata <- NA
-    relevant_product_store_timeline  <- product_store_timeline[productID==inspected_product &
-                                                                   storeID %in% relevant_events$storeID,]
     #Was the inspected product available long enough before and after the event?
     for(i in 1:nrow(relevant_events)){
         cat(i)
-        datebefore.c <- as.character(gsub("-", "", (relevant_events$date[i]-days_window)))
-        dateafter.c <- as.character(gsub("-", "", (relevant_events$date[i]+days_window-1)))
+        datebefore <- relevant_events$date[i]-days_window
+        dateafter <- relevant_events$date[i]+days_window-1
         
         #check if the window is in the time period when we have data
-        if(relevant_events$date[i]-days_window >= as.Date("2015-01-01") & relevant_events$date[i]+days_window-1 < as.Date("2016-03-15")){
-            relevant_events$enoughdata[i] <- relevant_product_store_timeline[storeID==relevant_events$storeID[i],get(dateafter.c)] &
-                relevant_product_store_timeline[storeID==relevant_events$storeID[i],get(datebefore.c)]
+        if(datebefore >= as.Date("2015-01-01") & dateafter < as.Date("2016-03-15")){
+            relevant_events$enoughdata[i] <- nrow(events[events$productID==treatment_product &
+                                                    events$begin!=introduction &
+                                                    events$storeID==relevant_events$storeID[i] &
+                                                    events$date > datebefore &
+                                                    events$date <= dateafter, 1:4]) < 1
         }
         else{
-            relevant_events$enoughdata[i] <-FALSE
+            relevant_events$enoughdata[i] <- FALSE
         }
     }
     cat("\nRelevant events with enough sales data found.\n")
@@ -104,33 +108,35 @@ diffindiff <- function(treatment_product, inspected_product, days_window, introd
     relevant_events$salesratio <- NA
     for(i in 1:nrow(relevant_events)){
         cat(i)
-        relevant_events$salesbefore[i] <- sum(sales[storeID == relevant_events$storeID[i] &
-                                                 productID == inspected_product &
+        #keys
+        relevant_events$salesbefore[i] <- sum(sales[productID == inspected_product &
+                                                 storeID == relevant_events$storeID[i] &
                                                  date < relevant_events$date[i] &
                                                  date >= relevant_events$date[i]-days_window, quantity_sold_kg])
-        relevant_events$salesafter[i] <- sum(sales[storeID == relevant_events$storeID[i] &
-                                                     productID == inspected_product &
+        relevant_events$salesafter[i] <- sum(sales[productID == inspected_product &
+                                                     storeID == relevant_events$storeID[i] &
                                                      date >= relevant_events$date[i] &
                                                      date < relevant_events$date[i]+days_window, quantity_sold_kg])
     }
     
     relevant_events$salesratio <- relevant_events$salesafter/relevant_events$salesbefore
+    relevant_events <- relevant_events[!is.na(relevant_events$salesratio),]
     return(relevant_events)
 }
 
 #trying
 did1a <-diffindiff("G01F04S12S01", "G01F01S01S01", 16, introduction = TRUE,
-           events = events, sales = sales, product_store_timeline = product_store_timeline)
+           events = events, sales = sales)
 did1b <-diffindiff("G01F04S12S01", "G01F01S01S01", 16, introduction = FALSE,
-                  events = events, sales = sales, product_store_timeline = product_store_timeline)
+                  events = events, sales = sales)
 did2a <-diffindiff("G19F03S02S01", "G01F01S01S01", 16, introduction = TRUE,
-                  events = events, sales = sales, product_store_timeline = product_store_timeline)
+                  events = events, sales = sales)
 did2b <-diffindiff("G19F03S02S01", "G01F01S01S01", 16, introduction = FALSE,
-                  events = events, sales = sales, product_store_timeline = product_store_timeline)
+                  events = events, sales = sales)
 did3a <-diffindiff("G19F03S02S02", "G01F01S01S01", 16, introduction = TRUE,
-                  events = events, sales = sales, product_store_timeline = product_store_timeline)
+                  events = events, sales = sales)
 did3b <-diffindiff("G19F03S02S02", "G01F01S01S01", 16, introduction = FALSE,
-                  events = events, sales = sales, product_store_timeline = product_store_timeline)
+                  events = events, sales = sales)
 plot(density(did1a$salesratio, na.rm=TRUE))
 plot(density(did1b$salesratio, na.rm=TRUE))
 plot(density(did2a$salesratio, na.rm=TRUE))
@@ -149,3 +155,9 @@ saveRDS(did2a, "did2a.RData")
 saveRDS(did2b, "did2b.RData")
 saveRDS(did3a, "did3a.RData")
 saveRDS(did3b, "did3b.RData")
+did1a <- readRDS("did1a.RData")
+did1b <- readRDS("did1b.RData")
+did2a <- readRDS("did2a.RData")
+did2b <- readRDS("did2b.RData")
+did3a <- readRDS("did3a.RData")
+did3b <- readRDS("did3b.RData")
