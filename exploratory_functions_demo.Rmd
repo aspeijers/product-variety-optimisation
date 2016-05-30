@@ -8,8 +8,6 @@ output: html_document
 First you have to create sales_by_month.RData with exploratoy_functions.R
 
 
-You can also embed plots, for example:
-
 ```{r, echo=FALSE}
 setwd("/media/balint/Storage/Tanulas/thesis/product-variety-optimisation")
 sales_by_month <- readRDS("sales_by_month.RData")
@@ -36,6 +34,7 @@ master_train$storeID <- as.factor(master_train$storeID)
 t <- head(master_train[, .(storeID, productID)])
 plotsales(t, plot_by = "storeID", sales_by_month)
 plotsales(master_train[, .(storeID, productID)], plot_by = "community", sales_by_month)
+plotsales(master_train[, .(storeID, productID)], plot_by = "fam", sales_by_month)
 
 
 #stacked barplot
@@ -45,7 +44,45 @@ master_table$sub_chain <- as.factor(master_table$sub_chain)
 
 ggplot(master_table, aes(x = chain, y = total_quantity, fill=sub_chain, group=sub_chain)) + 
     geom_bar(stat = "summary", fun.y=sum)
-#
 
+#SMOOTHING
+sales <- readRDS("sales.RData")
+id_pairs <- data.table(productID = "G13F03S01S04", storeID = 2784)
+
+#inputs and outputs of this function are data.table
+
+    datatosmooth <- merge(id_pairs, sales, by = c("storeID", "productID"))
+    sales_daily <- data.table(date = seq(min(datatosmooth$date), max(datatosmooth$date)-1, by="days"),
+                              quantity_sold_kg = as.numeric(NA))
+    
+    for(i in 1:(nrow(datatosmooth)-1)){
+        sale_current <- datatosmooth[i,]
+        sale_next <- datatosmooth[i+1,]
+        period_length <- sale_next[,date] - sale_current[,date]
+        rows <- which(sales_daily[,date] >= sale_current[,date] & sales_daily[,date] < sale_next[,date])
+        for(r in seq_along(rows)){
+            set(sales_daily,
+                i=rows[r],
+                j=2L,
+                value=sale_current[,quantity_sold_kg]/as.numeric(period_length))
+        }
+    }
+
+library(ggplot2)
+ggplot(datatosmooth, aes(x=date, y=quantity_sold_kg)) +
+    geom_line() +
+    theme_bw()
+ggplot(sales_daily, aes(x=date, y=quantity_sold_kg)) +
+    geom_line() +
+    theme_bw()
+
+#DIFFINDIFF
+
+did1a <- readRDS("did1a.RData")
+did1b <- readRDS("did1b.RData")
+plot(density(did1a$salesratio, na.rm=TRUE))
+plot(density(did1b$salesratio, na.rm=TRUE))
+median(did1a$salesratio, na.rm=TRUE)
+median(did1b$salesratio, na.rm=TRUE)
 ```
 

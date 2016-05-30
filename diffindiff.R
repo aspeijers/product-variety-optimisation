@@ -161,3 +161,11 @@ did2a <- readRDS("did2a.RData")
 did2b <- readRDS("did2b.RData")
 did3a <- readRDS("did3a.RData")
 did3b <- readRDS("did3b.RData")
+
+
+even <- events[,-c(1, 3, 4)]
+event_table_all <- aggregate(even[,-1], by=data.frame(even$productID), sum)
+even <- events[events$begin,-c(1, 3, 4)]
+event_table_intro <- aggregate(even[,-1], by=data.frame(even$productID), sum)
+even <- events[!events$begin,-c(1, 3, 4)]
+event_table_out <- aggregate(even[,-1], by=data.frame(even$productID), sum)
