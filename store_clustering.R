@@ -489,3 +489,66 @@ plot(fit) # display dendogram
 groups <- cutree(fit, k=5) # cut tree into 5 clusters
 # draw dendogram with red borders around the 5 clusters 
 rect.hclust(fit, k=5, border="red")
+
+
+
+################################################################################
+                    # clusters visualisation #
+################################################################################
+#load packages
+library(ggplot2)
+
+# read in tables
+cluster_store<- as.data.table(readRDS("storeID_cluster_mktshare_sales.RData"))
+#change storeID as int type 
+cluster_store$storeID = as.integer(as.character(cluster_store$storeID))
+master_train <- readRDS("master_train_mktshare.RData")
+
+# join
+clusters <- merge(master_train, cluster_store, by="storeID", all.x=TRUE)
+rm(master_train, cluster_store)
+
+# change necessary columns to factors
+factor_vars <- c("productID", "storeID", "grup", "fam", "subFam", "sub_chain",
+                 "chain", "town", "size", "community", "province", "units", 
+                 "flavor", "type", "fit.cluster")
+clusters <- clusters[,(factor_vars):=lapply(.SD, as.factor), .SDcols=factor_vars, with=FALSE]
+
+
+# plots - store vars - counts of stores
+store_vars = c("sub_chain", "chain", "size", "town", "province", "community")
+
+for (var in store_vars) {
+    print(ggplot(clusters, aes_string("fit.cluster", fill=var)) + geom_bar())
+}
+
+# investigate sub_chains appearing in cluster 2
+stores <- readRDS("stores.RData")
+large_stores <- stores[size %in% c("Z1", "Z2")]
+table(large_stores$sub_chain)
+hist(large_stores$sub_chain)
+
+clust2_subchains <- stores[sub_chain %in% c("3131", "3154")]
+table(clust2_subchains$chain)
+
+# plots - store vars - total_sales
+for (var in store_vars) {
+    print(ggplot(clusters, aes_string(x = "fit.cluster", y = "total_quantity", fill=var, group=var)) + 
+        geom_bar(stat = "summary", fun.y=sum))
+}
+
+
+# plot by product group
+ggplot(clusters, aes_string("fit.cluster", fill="grup")) + geom_bar()
+ggplot(clusters, aes_string(x = "fit.cluster", y = "total_quantity", fill="grup", group="grup")) + 
+    geom_bar(stat = "summary", fun.y=sum)
+
+# plot by product type
+ggplot(clusters, aes_string("fit.cluster", fill="type")) + geom_bar()
+ggplot(clusters, aes_string(x = "fit.cluster", y = "total_quantity", fill="type", group="type")) + 
+    geom_bar(stat = "summary", fun.y=sum)
+
+# plot by product flavour
+ggplot(clusters, aes_string("fit.cluster", fill="flavor")) + geom_bar()
+ggplot(clusters, aes_string(x = "fit.cluster", y = "total_quantity", fill="flavor", group="flavor")) + 
+    geom_bar(stat = "summary", fun.y=sum)
