@@ -162,10 +162,23 @@ did2b <- readRDS("did2b.RData")
 did3a <- readRDS("did3a.RData")
 did3b <- readRDS("did3b.RData")
 
-
+#NUMBER OF EVENTS TABLE BY PRODUCT PAIRS
+library(reshape2)
 even <- events[,-c(1, 3, 4)]
 event_table_all <- aggregate(even[,-1], by=data.frame(even$productID), sum)
+event_table_all <- melt(event_table_all, id=1)
+names(event_table_all) <- c("treatment_productID", "inspected_productID", "number_of_events")
 even <- events[events$begin,-c(1, 3, 4)]
 event_table_intro <- aggregate(even[,-1], by=data.frame(even$productID), sum)
+event_table_intro <- melt(event_table_intro, id=1)
+names(event_table_intro) <- c("treatment_productID", "inspected_productID", "number_of_intros")
 even <- events[!events$begin,-c(1, 3, 4)]
 event_table_out <- aggregate(even[,-1], by=data.frame(even$productID), sum)
+event_table_out <- melt(event_table_out, id=1)
+names(event_table_out) <- c("treatment_productID", "inspected_productID", "number_of_outs")
+event_table_all <- merge(event_table_all, event_table_intro)
+event_table_all <- merge(event_table_all, event_table_out)
+saveRDS(event_table_all, "event_table_all.RData")
+
+event_table_all <- event_table_all[as.character(event_table_all$treatment_productID)!=as.character(event_table_all$inspected_productID),]
+event_table_all <- event_table_all[event_table_all$number_of_events>0,]
