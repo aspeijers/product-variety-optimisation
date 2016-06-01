@@ -7,7 +7,7 @@ master_train <- readRDS("master_train.RData")
 # The predict.basic function uses sales from training where they are available
 # and average sales by product where it was not sold before.
 # It uses data.table inputs, but the output is data.frame.
-predict.basic <- function(master_test, master_train){
+predict_basic <- function(master_test, master_train){
     
     #create a pred table with the same size and same rows than master_test
     pred <- master_test[,.(productID, storeID)]
