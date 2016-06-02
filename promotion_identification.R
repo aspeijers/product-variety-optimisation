@@ -1,15 +1,6 @@
 library(data.table)
-# Add the promotional group 
-stores_old = readRDS("pdvClean.RData")
-stores_new= readRDS("stores.RData")
-
-
-names(stores_old)[1:2] = c("storeID","promo_group")
-stores_old[,names(stores_old)[3:length(names(stores_old))]:=NULL]
-
-stores_new = setorder(stores_new,-storeID)
-stores_old = setorder(stores_old,-storeID)
-stores_new = cbind(stores_new,stores_old$promo_group)
+library(ggplot2)
+stores= readRDS("stores.RData")
 
 # Look which stores we need 
 master_train = readRDS("master_train_mktshare.RData")
@@ -19,40 +10,40 @@ storeID_master = unique(c(master_test$storeID,master_train$storeID))
 
 rm(master_test)
 rm(master_train)
-rm(stores_old)
+
 
 #subset stores for the ones which we want 
-stores_new = stores_new[storeID %in% storeID_master]
+stores= stores[storeID %in% storeID_master]
 
 
 #find the not-changing-promo_group storeIDs
 not_changing_promo_group_stores = c()
 for(i in storeID_master){
-  if(length(unique(stores_new[storeID ==i,]$promo_group)) == 1){ 
-    changing_promo_group_stores=c(changing_promo_group_stores,i)
+  if(length(unique(stores[storeID ==i,]$promo_group)) == 1){ 
+    not_changing_promo_group_stores=c(not_changing_promo_group_stores,i)
     }
 }
 
 #subset only for those whose promo_group is not changing 
-stores_new = stores_new[storeID %in% not_changing_promo_group_stores]
+stores = stores[storeID %in% not_changing_promo_group_stores]
 
 #take only one row for each store (nothing is changing now)
-stores_new[,date:=NULL]
-stores_new = stores_new[duplicated(stores_new)==FALSE]
+stores[,date:=NULL]
+stores = stores[duplicated(stores)==FALSE]
 
 #save it 
-saveRDS(stores_new,"stores_promo_group.RData" )
+saveRDS(stores,"stores_promo_group.RData" )
 
-#how many promotiona groups there are 
-length(unique(stores_new$promo_group))
+#how many promotion groups there are 
+length(unique(stores$promo_group))
 
 #first remove the promo_group where there are less than 2 stores 
-promo_group_filtered = as.data.frame(table(stores_new$promo_group))
+promo_group_filtered = as.data.frame(table(stores$promo_group))
 promo_group_filtered = promo_group_filtered[promo_group_filtered$Freq>2,]
 
 #take the first promo group 
 promo1 = as.integer(as.character(promo_group_filtered[1,1]))
-stores_promo1 = stores_new[promo_group == promo1]$storeID
+stores_promo1 = stores[promo_group == promo1]$storeID
 #load in the sales data 
 sales = readRDS("sales.RData")
 #subset for promo1
@@ -65,47 +56,119 @@ for(i in unique(sales_promo1$productID)){
   }
 }
 
-### Plot them 
 
-#sales_by_month <- readRDS("sales_by_month.RData")
-library(ggplot2)
-library(plyr)
-library(data.table)
-#this function is for plotting sales as time series
-#sales_by_month is the data frame needed
-#id_pairs id the data frame with productID and storeID pairs
-#plot_by is the factor variable by which you want to split the data
-plotsales <- function(id_pairs, plot_by, sales_by_month){
-  datatoplot <- merge(id_pairs, sales_by_month, by = c("storeID", "productID"))
-  #datatoplot <- ddply(datatoplot, .(get(plot_by), month), summarize, quantity_sold_kg = sum(quantity_sold_kg))
-  #names(datatoplot)[1] <- plot_by
-  ggplot(datatoplot, aes_string(x="date", y="quantity_sold_kg", group = plot_by, colour = plot_by)) +
+ ##### t+1/t
+product1 = common_products[1]
+ # subset for the first product
+sales_promo1_pr1 = sales_promo1[productID==product1]
+sales_promo1_pr1 = sales_promo1_pr1[,simple_ration :=NA_real_]
+# order by store and date
+sales_promo1_pr1 = setorder(sales_promo1_pr1,storeID,date)
+
+
+simple_ratio_function = function(x){
+  simple_ratio = x/shift(x,type="lag")
+}
+
+sales_promo1_pr1 = sales_promo1_pr1[,.(date,quantity_sold_kg,simple_ratio = simple_ratio_function(quantity_sold_kg)), by = storeID]
+
+
+  ggplot(sales_promo1_pr1, aes(x=date, y=simple_ratio, group = as.character(storeID), colour = as.character(storeID))) +
     geom_line() +
     theme_bw()
+
+#try to spread the sales over certain period 
+# daily contdata
+
+a = data.table(date=seq.Date(min(sales_promo1_pr1$date), max(sales_promo1_pr1$date), by="day"))
+storeID = rep(stores_promo1,each = nrow(a))
+a_all_stores = cbind(storeID,a)
+rm(storeID)
+b = merge(sales_promo1_pr1, a_all_stores, by=c("date","storeID"), all.y = TRUE)
+#change all NAs to zeros 
+b$quantity_sold_kg = ifelse(is.na(b$quantity_sold_kg),0,b$quantity_sold_kg)
+#smoothing part 
+ 
+smoothing = function(x,time_period){
+  daily_sells = 0 
+  for (i in 1:time_period){
+    new_enty = shift(x,n=i,type = "lag")/time_period
+    daily_sells = daily_sells + new_enty
+  }
+  return(daily_sells)
 }
-#TEST
 
-product1 = common_products[1]
-id_pairs = cbind(stores_promo1,rep(product1,length(stores_promo1)))
-colnames(id_pairs) = c("storeID","productID")
-id_pairs = as.data.frame(id_pairs)
-id_pairs$storeID = as.factor(id_pairs$storeID)
- id_pairs$productID = as.factor(id_pairs$productID)
- sales_promo1$productID = as.factor(sales_promo1$productID)
- sales_promo1$storeID = as.factor(sales_promo1$storeID)
- plotsales(id_pairs, plot_by = "storeID", sales_promo1)
- 
- plotsales(id_pairs, plot_by = "storeID", sales_promo1)
- 
- #group stores by something else
- # size of the store 
- # divide by total sales 
- 
- 
+time_period = 14
+b = b[,quantity_b:=NA_real_]
+b = b[,.(date,quantity_sold_kg,quantity_b = smoothing(quantity_sold_kg,time_period)), by = storeID]
+
+ggplot(b, aes(x=date, y=quantity_b, group = as.character(storeID), colour = as.character(storeID))) +
+  geom_line() +
+  theme_bw()  
+
+b = b[,.(date,quantity_sold_kg,quantity_b,simple_ratio = simple_ratio_function(quantity_b)), by = storeID]
+
+ggplot(b, aes(x=date, y=simple_ratio, group = as.character(storeID), colour = as.character(storeID))) +
+  geom_line() +
+  theme_bw() 
 
 
+### median_ratio
+
+median_ratio_function = function(x,median_period){
+  values = as.data.frame(matrix(NA,length(x),median_period))
+  for (i in 1:median_period){
+    new_enty = shift(x,n=i,type = "lag")
+    values[,i] = new_enty
+  }
+  med = apply(values,1,median)
+  med = ifelse(is.na(med),x,med)
+  med = ifelse(is.na(med),0,med)
+  median_ratio = x/med
+  median_ratio = ifelse(is.nan(median_ratio),1,median_ratio)
+  median_ratio = ifelse(is.infinite(median_ratio),0,median_ratio)
+  median_ratio = ifelse(is.na(median_ratio),0,median_ratio)
+  return(median_ratio)
+}
+
+median_period = 7
+sales_promo1_pr1 = sales_promo1_pr1[,.(date,quantity_sold_kg,median_ratio = median_ratio_function(quantity_sold_kg,median_period)), by = storeID]
+ggplot(sales_promo1_pr1, aes(x=date, y=median_ratio, group = as.character(storeID), colour = as.character(storeID))) +
+  geom_line() +
+  theme_bw() 
+
+b = b[,.(date,quantity_sold_kg,quantity_b,median_ratio = median_ratio_function(quantity_b,median_period)), by = storeID]
+ggplot(b, aes(x=date, y=median_ratio, group = as.character(storeID), colour = as.character(storeID))) +
+  geom_line() +
+  theme_bw() 
+
+##looking at the sales_promo1
+above = quantile(sales_promo1_pr1$median_ratio,probs =0.95)
+sales_promo1_pr1 = sales_promo1_pr1[,extremes := median_ratio > above]
+extreme_events = sales_promo1_pr1[extremes == TRUE]
+setorder(extreme_events,date)
+#date grouping 
+cluster_dates = function(x){
+  clusters = rep(NA,length(x))
+  #clusters[1] = 1 
+  a = diff(extreme_events$date,lag = 1)
+  clusters = ifelse(a>3,1,0)
+  
+  index=1
+  cluster_name = rep(NA,length(clusters))
+  for (i in 1:length(clusters)){
+    if (clusters[i]==0){
+      cluster_name[i] = index
+    }else{
+      cluster_name[i] = index +1
+      index = index +1 
+    }
+  }
+}
 
 
-
-
-
+## the smooth one 
+above = quantile(b$median_ratio,probs =0.99)
+b = b[,extremes := median_ratio > above]
+extreme_events = b[extremes == TRUE]
+setorder(extreme_events,date)
