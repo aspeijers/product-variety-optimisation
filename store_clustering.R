@@ -437,6 +437,8 @@ for (i in dummy_vars) {
 
 rm(dummy_matrix)
 
+saveRDS(stores_dummies, "stores_dummies_mktsharesales.RData")
+
 # separate storeID into a different vector
 storeIDs <- stores_dummies$storeID
 stores_dummies[,storeID:=NULL]
@@ -454,7 +456,7 @@ c_lsa <- cosine(t(as.matrix(stores_dummies)))
 # Determine number of clusters
 wss <- (nrow(stores_dummies)-1)*sum(apply(as.data.frame(stores_dummies),2,var))
 
-# check for 2 to 15 clusters
+# check for 2 to 20 clusters
 for (i in 2:20) {
     wss[i] <- sum(kmeans(stores_dummies,centers=i)$withinss)
 }
