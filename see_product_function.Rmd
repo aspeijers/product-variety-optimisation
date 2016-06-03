@@ -1,0 +1,8 @@
+```{r, echo =FALSE}
+for (i in 1:10){
+  see_product_promo1(i)
+}
+  
+
+
+```

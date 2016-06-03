@@ -59,11 +59,7 @@ for(i in unique(sales_promo1$productID)){
 
  ##### t+1/t
 product1 = common_products[1]
- # subset for the first product
-sales_promo1_pr1 = sales_promo1[productID==product1]
-sales_promo1_pr1 = sales_promo1_pr1[,simple_ration :=NA_real_]
-# order by store and date
-sales_promo1_pr1 = setorder(sales_promo1_pr1,storeID,date)
+ 
 
 
 simple_ratio_function = function(x){
@@ -172,3 +168,5 @@ above = quantile(b$median_ratio,probs =0.99)
 b = b[,extremes := median_ratio > above]
 extreme_events = b[extremes == TRUE]
 setorder(extreme_events,date)
+
+
