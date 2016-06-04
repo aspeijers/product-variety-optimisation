@@ -109,6 +109,8 @@ diffindiff <- function(treatment_product, inspected_product, days_window, introd
     for(i in 1:nrow(relevant_events)){
         cat(i)
         #keys
+        # shift function -> add zero rows to sales function (look at promotion_identification_smoothing.R)
+        # customized sum function 
         relevant_events$salesbefore[i] <- sum(sales[productID == inspected_product &
                                                  storeID == relevant_events$storeID[i] &
                                                  date < relevant_events$date[i] &
