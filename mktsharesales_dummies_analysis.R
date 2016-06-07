@@ -11,14 +11,16 @@ fam_cols        <- names(stores_dummies)[143:183]
 subfam_cols     <- names(stores_dummies)[184:244]
 
 # check products
-store_counts <- rep(0, length(stores_dummies))
-names(store_counts) <- as.numeric(levels(stores_dummies$storeID))[stores_dummies$storeID]
+#store_counts <- rep(0, ncol(stores_dummies))
+#names(store_counts) <- as.integer(as.character(stores_dummies$storeID))
+
+
 # make this a matrix ...
 for (i in 1:length(product_cols)) {
     col <- as.data.frame(stores_dummies[,c("storeID", product_cols[i]), with=FALSE])
-    col_nonzero <- col[col[,2]>0,]
-    avg <- mean(col_nonzero[,2])
-    stdev <- sd(col_nonzero[,2])
+    col_nonzero <- col[col[,2]>0,2]
+    avg <- mean(col_nonzero)
+    stdev <- sd(col_nonzero)
     interval_lower <- avg - 3*stdev
     interval_upper <- avg + 3*stdev
     outside_CI <- (col_nonzero<interval_lower | col_nonzero>interval_upper)

@@ -248,6 +248,8 @@ for (i in dummy_vars) {
 
 rm(dummy_matrix)
 
+saveRDS(stores_dummies, "stores_dummies_mktshareshelf.RData")
+
 # separate storeID into a different vector
 storeIDs <- stores_dummies$storeID
 stores_dummies[,storeID:=NULL]
@@ -453,30 +455,7 @@ c_lsa <- cosine(t(as.matrix(stores_dummies)))
 ########################### k-means clustering #################################
 # We DON'T  need to scale the variables because they are average to average 
 
-# Determine number of clusters
-wss <- (nrow(stores_dummies)-1)*sum(apply(as.data.frame(stores_dummies),2,var))
 
-# check for 2 to 20 clusters
-for (i in 2:20) {
-    wss[i] <- sum(kmeans(stores_dummies,centers=i)$withinss)
-}
-
-plot(1:20, wss, type="b", xlab="Number of Clusters",
-     ylab="Within groups sum of squares")
-# we choose 6 (for now)
-
-
-# K-Means Cluster Analysis
-fit <- kmeans(stores_dummies, 6) 
-# get cluster means 
-centroids <- aggregate(stores_dummies,by=list(fit$cluster),FUN=mean)
-# append cluster assignment
-mydata <- data.frame(stores_dummies, fit$cluster)
-
-# append store ID
-store_cluster <- cbind(storeIDs, mydata)
-storeID_cluster <- store_cluster[,c("storeIDs", "fit.cluster")]
-names(storeID_cluster)[1] <- "storeID"
 
 saveRDS(storeID_cluster, "storeID_cluster_mktshare_sales.RData")
 
@@ -554,3 +533,379 @@ ggplot(clusters, aes_string(x = "fit.cluster", y = "total_quantity", fill="type"
 ggplot(clusters, aes_string("fit.cluster", fill="flavor")) + geom_bar()
 ggplot(clusters, aes_string(x = "fit.cluster", y = "total_quantity", fill="flavor", group="flavor")) + 
     geom_bar(stat = "summary", fun.y=sum)
+
+################################################################################
+                        # different clusters #
+################################################################################
+stores_dummies <- readRDS("stores_dummies_mktsharesales.RData")
+
+# separate storeID into a different vector
+storeIDs <- stores_dummies$storeID
+stores_dummies[,storeID:=NULL]
+
+# k-means clusters
+product_cols    <- names(stores_dummies)[3:109]
+flavor_cols     <- names(stores_dummies)[110:119]
+type_cols       <- names(stores_dummies)[120:122]
+units_cols      <- names(stores_dummies)[123:128]
+grup_cols       <- names(stores_dummies)[129:141]
+fam_cols        <- names(stores_dummies)[142:182]
+subfam_cols     <- names(stores_dummies)[183:243]
+store_cols      <- names(stores_dummies)[244:1065]
+
+# all vars
+wss <- (nrow(stores_dummies)-1)*sum(apply(as.data.frame(stores_dummies),2,var))
+
+for (i in 2:20) {
+    wss[i] <- sum(kmeans(stores_dummies,centers=i, iter.max = 100)$withinss)
+}
+plot(1:20, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+# we choose 6 (for now)
+
+# calc clusters
+fit <- kmeans(stores_dummies, 6) 
+data_cluster <- data.frame(storeIDs, fit$cluster)
+names(data_cluster)[ncol(data_cluster)] <- "sales_store"
+
+# all mkt shares, no stores vars
+stores_dummies_subset <- stores_dummies[,c(product_cols, subfam_cols, fam_cols, grup_cols, flavor_cols, type_cols, units_cols), with=FALSE]
+
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:20) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i, iter.max = 100)$withinss)
+}
+
+plot(1:20, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+# 6 clusters
+
+
+# only product mktshare
+stores_dummies_subset <- stores_dummies[,product_cols, with=FALSE]
+
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:50) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i)$withinss)
+}
+
+plot(1:50, wss[1:50], type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+# 15, uneven
+
+# only subFam mktshare
+stores_dummies_subset <- stores_dummies[,subfam_cols, with=FALSE]
+
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:50) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i)$withinss)
+}
+
+plot(1:50, wss[1:50], type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+# uneven
+
+# only Fam mktshare
+stores_dummies_subset <- stores_dummies[,fam_cols, with=FALSE]
+
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:50) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i)$withinss)
+}
+
+plot(1:50, wss[1:50], type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+
+
+# only grup mktshare
+stores_dummies_subset <- stores_dummies[,grup_cols, with=FALSE]
+
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:20) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i)$withinss)
+}
+
+plot(1:20, wss[1:20], type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+#6
+
+
+# only flavor mktshare
+stores_dummies_subset <- stores_dummies[,flavor_cols, with=FALSE]
+
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:20) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i)$withinss)
+}
+
+plot(1:20, wss[1:20], type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+#6
+
+# only type mktshare
+stores_dummies_subset <- stores_dummies[,type_cols, with=FALSE]
+
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:20) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i)$withinss)
+}
+
+plot(1:20, wss[1:20], type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+#6
+
+
+# subset, group, flavor and type
+stores_dummies_subset <- stores_dummies[, c(grup_cols, flavor_cols, type_cols), with=FALSE]
+
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:20) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i, iter.max = 50)$withinss)
+}
+
+plot(1:20, wss[1:20], type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+# 10 clusters, not vary exponential
+
+
+# calc clusters
+fit <- kmeans(stores_dummies_subset, 10) 
+data_cluster <- cbind(data_cluster, fit$cluster)
+names(data_cluster)[ncol(data_cluster)] <- "sales_grupflavortype"
+
+
+# only stores vars
+stores_dummies_subset <- stores_dummies[,store_cols, with=FALSE]
+
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:20) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i, iter.max = 100)$withinss)
+}
+
+plot(1:20, wss[1:20], type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+#very uneven
+
+
+
+####### mkt share by shelf space dummies
+stores_dummies <- readRDS("stores_dummies_mktshareshelf.RData")
+
+# separate storeID into a different vector
+storeIDs <- stores_dummies$storeID
+stores_dummies[,storeID:=NULL]
+
+# k-means clusters
+product_cols    <- names(stores_dummies)[3:109]
+flavor_cols     <- names(stores_dummies)[110:119]
+type_cols       <- names(stores_dummies)[120:122]
+units_cols      <- names(stores_dummies)[123:128]
+grup_cols       <- names(stores_dummies)[129:141]
+fam_cols        <- names(stores_dummies)[142:182]
+subfam_cols     <- names(stores_dummies)[183:243]
+store_cols      <- names(stores_dummies)[244:1065]
+
+
+# all mkt shares (including store vars)
+wss <- (nrow(stores_dummies)-1)*sum(apply(as.data.frame(stores_dummies),2,var))
+
+for (i in 2:20) {
+    wss[i] <- sum(kmeans(stores_dummies,centers=i, iter.max = 100)$withinss)
+}
+
+plot(1:20, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+# 6
+
+# calc clusters
+fit <- kmeans(stores_dummies, 6) 
+data_cluster <- cbind(data_cluster, fit$cluster)
+names(data_cluster)[ncol(data_cluster)] <- "shelf_store"
+
+
+# all mkt shares, no stores vars
+stores_dummies_subset <- stores_dummies[,c(product_cols, subfam_cols, fam_cols, grup_cols, flavor_cols, type_cols, units_cols), with=FALSE]
+
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:20) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i, iter.max = 100)$withinss)
+}
+
+plot(1:20, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+# uneven
+
+
+# only product mktshare
+stores_dummies_subset <- stores_dummies[,product_cols, with=FALSE]
+
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:50) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i, iter.max = 100)$withinss)
+}
+
+plot(1:50, wss[1:50], type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+# no exponential pattern
+
+# only subFam mktshare
+stores_dummies_subset <- stores_dummies[,subfam_cols, with=FALSE]
+
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:50) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i, iter.max = 100)$withinss)
+}
+
+plot(1:50, wss[1:50], type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+# no exponential pattern
+
+# only Fam mktshare
+stores_dummies_subset <- stores_dummies[,fam_cols, with=FALSE]
+
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:50) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i, iter.max = 100)$withinss)
+}
+
+plot(1:50, wss[1:50], type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+# not bad, not good
+
+
+# only grup mktshare
+stores_dummies_subset <- stores_dummies[,grup_cols, with=FALSE]
+
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:20) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i, iter.max = 100)$withinss)
+}
+
+plot(1:20, wss[1:20], type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+# ok
+
+
+# only flavor mktshare
+stores_dummies_subset <- stores_dummies[,flavor_cols, with=FALSE]
+
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:20) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i, iter.max = 100)$withinss)
+}
+
+plot(1:20, wss[1:20], type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+# ok
+
+# only type mktshare
+stores_dummies_subset <- stores_dummies[,type_cols, with=FALSE]
+
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:20) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i, iter.max = 100)$withinss)
+}
+
+plot(1:20, wss[1:20], type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+# a bit uneven
+
+
+# subset, group, flavor and type
+stores_dummies_subset <- stores_dummies[, c(grup_cols, flavor_cols, type_cols), with=FALSE]
+
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:20) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i, iter.max = 100)$withinss)
+}
+
+plot(1:20, wss[1:20], type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+# uneven
+
+# subset, group, flavor
+stores_dummies_subset <- stores_dummies[, c(grup_cols, flavor_cols), with=FALSE]
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:20) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i, iter.max = 100)$withinss)
+}
+plot(1:20, wss[1:20], type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+# ok, 10 clusters
+
+# calc clusters
+fit <- kmeans(stores_dummies_subset, 10, iter.max = 100) 
+data_cluster <- cbind(data_cluster, fit$cluster)
+names(data_cluster)[ncol(data_cluster)] <- "shelf_grupflavor"
+
+
+################# mkt share sales and shelfspace
+stores_dummies_sales <- readRDS("stores_dummies_mktsharesales.RData")
+stores_dummies_shelf <- readRDS("stores_dummies_mktshareshelf.RData")
+
+# separate storeID into a different vector
+storeIDs <- stores_dummies$storeID
+stores_dummies_sales[,storeID:=NULL]
+stores_dummies_shelf[,storeID:=NULL]
+
+# remove store vars from one tables
+store_cols      <- names(stores_dummies_shelf)[244:1065]
+stores_dummies_sales[,store_cols:=NULL, with=FALSE]
+
+# combine tables
+stores_dummies <- cbind(stores_dummies_sales, stores_dummies_shelf)
+
+wss <- (nrow(stores_dummies)-1)*sum(apply(as.data.frame(stores_dummies),2,var))
+
+for (i in 2:20) {
+    wss[i] <- sum(kmeans(stores_dummies,centers=i, iter.max = 100)$withinss)
+}
+
+plot(1:20, wss[1:20], type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+# ok, 6 clusters
+
+#now try without store vars
+stores_dummies_subset <- stores_dummies[,store_cols:= NULL, with=FALSE]
+
+wss <- (nrow(stores_dummies_subset)-1)*sum(apply(as.data.frame(stores_dummies_subset),2,var))
+
+for (i in 2:20) {
+    wss[i] <- sum(kmeans(stores_dummies_subset,centers=i, iter.max = 100)$withinss)
+}
+
+plot(1:20, wss[1:20], type="b", xlab="Number of Clusters", ylab="Within groups sum of squares")
+# very similar to above. Deni prefers without. 6 clusters
+
+# calc clusters
+fit <- kmeans(stores_dummies_subset, 6, iter.max = 100) 
+data_cluster <- cbind(data_cluster, fit$cluster)
+names(data_cluster)[ncol(data_cluster)] <- "sales_shelf"
+
+# renames storeid col and save
+names(data_cluster)[1] <- "storeID"
+saveRDS(data_cluster, "kmeans_clusters.RData")
+
+rm(list=ls())
+
+
+################################################################################
+                    # spectral clustering #
+################################################################################
+library(kernlab)
+
+stores_dummies_sales <- readRDS("stores_dummies_mktsharesales.RData")
+stores_dummies_shelf <- readRDS("stores_dummies_mktshareshelf.RData")
+
+# separate storeID into a different vector
+storeIDs <- stores_dummies$storeID
+stores_dummies_sales[,storeID:=NULL]
+stores_dummies_shelf[,storeID:=NULL]
+
+# remove store vars from one tables
+store_cols      <- names(stores_dummies_shelf)[244:1065]
+stores_dummies_sales[,store_cols:=NULL, with=FALSE]
+
+# combine tables
+stores_dummies <- cbind(stores_dummies_sales, stores_dummies_shelf)
+
+sc <- specc(stores_dummies, centers=6)
+plot(my.data, col=sc, pch=4)            # estimated classes (x)
+points(my.data, col=obj$classes, pch=5)
