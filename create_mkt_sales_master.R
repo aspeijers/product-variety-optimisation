@@ -101,6 +101,17 @@ rm(master_byUnits)
 master[,c("avg_sales_store", "avg_sales_subFam", "avg_sales_Fam", 
                "avg_sales_Grup", "avg_sales_Flavor", "avg_sales_Type", "avg_sales_Units"):=NULL]
 
+
+########### Create standardised total quantity per store variable
+master_bystore <- master[,.(storeID, total_quantity)]
+master_bystore <- master_bystore[,lapply(.SD, sum), by=storeID]
+master_bystore <- master_bystore[,total_quantity:= scale(total_quantity)]
+names(master_bystore)[2] <- "store_total_quantity"
+
+# merge this back into the master table
+master <- merge(master, master_bystore, by="storeID", all.x = TRUE)
+
+
 ########### write file
 saveRDS(master, "master_mktshare.RData")
 

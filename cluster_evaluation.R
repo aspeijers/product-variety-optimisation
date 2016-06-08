@@ -113,4 +113,13 @@ clusterMAE
 # Clusterings 1,3 and 5 have the next lowest MSEs. Out of these clustering 5 has the lowest MSE. 
 
 # Clustering 5: corresponds to clustering based on all the mkt share by sales and mkt share by shelf 
-# space variables, but without the store variables. Under this clustering there are 6 clusters. 
+# space variables, but without the store variables. Under this clustering there are 6 clusters.
+
+
+####################################################################################
+# we now compare the clusterings with simply averaging over all stores (the basic model)
+test_noclust <- cbind(test1[,.(storeID, productID, avg_sales_per_day)], cluster=rep(1,nrow(test1)))
+train_noclust <- cbind(train1[,.(storeID, productID, avg_sales_per_day)], cluster=rep(1,nrow(train1)))
+clustering_noclust_pred <- cluster_evaluation(test_noclust, train_noclust)
+
+# results are similar to clusterings 
