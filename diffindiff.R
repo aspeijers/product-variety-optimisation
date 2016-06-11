@@ -70,10 +70,11 @@ ggplot(sales_daily, aes(x=date, y=quantity_sold_kg)) +
 library(data.table)
 sales <- readRDS("sales.RData")
 events <- readRDS("events.RData")
+promo_prod_date <- readRDS("promotion_dates.RData")
 events$date <- as.Date(events$date, "%Y%m%d")
 setkey(sales, productID)
 
-enoughdata <- function(date, storeID, relevant_events_treatment, relevant_events_inspected, days_window){
+enoughdata <- function(date, storeID, relevant_events_treatment, relevant_events_inspected, days_window, relevant_promotions){
     date <- as.Date(date)
     datebefore <- date-days_window
     dateafter <- date+days_window
@@ -85,23 +86,31 @@ enoughdata <- function(date, storeID, relevant_events_treatment, relevant_events
     }
     
     #Is there only one event for the treatment product in the given store within the time window?
-    if(nrow(relevant_events_treatment[relevant_events_treatment$storeID==storeID &&
+    else if(nrow(relevant_events_treatment[relevant_events_treatment$storeID==storeID &&
                                       relevant_events_treatment$date >= datebefore &&
                                       relevant_events_treatment$date < dateafter, ]) > 1){
         enoughdata <- FALSE
     }
     
     #Is there any event for the inspected product in the given store within the time window?
-    if(nrow(relevant_events_treatment[relevant_events_inspected$storeID==storeID &&
+    else if(nrow(relevant_events_treatment[relevant_events_inspected$storeID==storeID &&
                                       relevant_events_inspected$date >= datebefore &&
                                       relevant_events_inspected$date < dateafter, ]) > 0){
         enoughdata <- FALSE
     }
+    
+    #Has the inspected product a promotion in the given period?
+    else if(nrow(relevant_promotions[relevant_promotions$storeID==storeID &&
+                                relevant_promotions$promo_start_date >= datebefore-14 &&
+                                relevant_promotions$promo_start_date < dateafter, ]) > 0){
+        enoughdata <- FALSE
+    }
+    
     return(enoughdata)
 }
 
 diffindiff <- function(treatment_product, inspected_product, days_window, introduction,
-                       events, sales){
+                       events, sales, promo_prod_date){
     
     #relevant_events_forcalc contains the events from which we potentially want to calculate a salesratio.
     #relevant_events_treatment and relevant_events_inspected contain the events
@@ -111,9 +120,10 @@ diffindiff <- function(treatment_product, inspected_product, days_window, introd
     relevant_events_inspected <- events[events$productID==inspected_product, 1:4]
     relevant_events_forcalc <- relevant_events_treatment[relevant_events_treatment$begin==introduction,]
     cat("relevant events selected\n")
+    relevant_promotions <- promo_prod_date[productID == inspected_product,]
     relevant_events_forcalc$enoughdata <- NA
     #Was the inspected product available long enough before and after the event?
-    relevant_events_forcalc$enoughdata <- apply(relevant_events_forcalc, 1, function(x) enoughdata(x['date'], x['storeID'], relevant_events_treatment, relevant_events_inspected, days_window))
+    relevant_events_forcalc$enoughdata <- apply(relevant_events_forcalc, 1, function(x) enoughdata(x['date'], x['storeID'], relevant_events_treatment, relevant_events_inspected, days_window, relevant_promotions))
     relevant_events_forcalc <- relevant_events_forcalc[relevant_events_forcalc$enoughdata,]
     
     cat("\nRelevant events with enough sales data found.\n")
@@ -127,13 +137,12 @@ diffindiff <- function(treatment_product, inspected_product, days_window, introd
     setkeyv(relevant_sales, c("storeID", "date"))
     for(i in 1:nrow(relevant_events_forcalc)){
         cat(i)
+        relevant_sales_for_specific_store <- relevant_sales[storeID == relevant_events_forcalc$storeID[i],]
         # shift function -> add zero rows to sales function (look at promotion_identification_smoothing.R)
-        relevant_events_forcalc$salesbefore[i] <- sum(relevant_sales[storeID == relevant_events_forcalc$storeID[i] &
-                                                                         date < relevant_events_forcalc$date[i] &
-                                                                         date >= relevant_events_forcalc$date[i]-days_window, quantity_sold_kg])
-        relevant_events_forcalc$salesafter[i] <- sum(relevant_sales[storeID == relevant_events_forcalc$storeID[i] &
-                                                                        date >= relevant_events_forcalc$date[i] &
-                                                                        date < relevant_events_forcalc$date[i]+days_window, quantity_sold_kg])
+        relevant_events_forcalc$salesbefore[i] <- sum(relevant_sales_for_specific_store[date < relevant_events_forcalc$date[i] &
+                                                                                        date >= relevant_events_forcalc$date[i]-days_window, quantity_sold_kg])
+        relevant_events_forcalc$salesafter[i] <- sum(relevant_sales_for_specific_store[date >= relevant_events_forcalc$date[i] &
+                                                                                        date < relevant_events_forcalc$date[i]+days_window, quantity_sold_kg])
     }
     cat("\n")
     relevant_events_forcalc$salesratio <- relevant_events_forcalc$salesafter/relevant_events_forcalc$salesbefore
@@ -142,16 +151,19 @@ diffindiff <- function(treatment_product, inspected_product, days_window, introd
 }
 
 #test the time it takes
-events_test <- events[1:10000,]
+treatment_product="G01F04S12S01"
+inspected_product="G01F01S01S01"
+days_window=30
+introduction = TRUE
 t0 <- system.time(diffindiff("G01F04S12S01", "G01F01S01S01", 30, introduction = TRUE,
-                   events = events, sales = sales))
+                   events = events, sales = sales, promo_prod_date))
 t1 <- system.time(diffindiff("G01F04S12S01", "G01F01S01S01", 30, introduction = TRUE,
-                             events = events, sales = sales))
+                             events = events, sales = sales, promo_prod_date))
 did1anew <- diffindiffnew("G01F04S12S01", "G01F01S01S01", 30, introduction = TRUE,
               events = events, sales = sales)
 #trying
 did1a <-diffindiff("G01F04S12S01", "G01F01S01S01", 30, introduction = TRUE,
-           events = events, sales = sales)
+           events = events, sales = sales, promo_prod_date)
 did1b <-diffindiff("G01F04S12S01", "G01F01S01S01", 30, introduction = FALSE,
                   events = events, sales = sales)
 did2a <-diffindiff("G19F03S02S01", "G01F01S01S01", 30, introduction = TRUE,
@@ -214,103 +226,51 @@ event_table_all <- event_table_all[event_table_all$number_of_events>10,]
 saveRDS(event_table_all, "event_table_all.RData")
 
 
-numberofevents <- function(treatment_product, inspected_product, days_window, introduction, events){
+numberofevents <- function(treatment_product, inspected_product, days_window, introduction, events, promo_prod_date){
     relevant_events_treatment <- events[events$productID==treatment_product &
                                             events[, inspected_product], 1:4]
     relevant_events_inspected <- events[events$productID==inspected_product, 1:4]
     relevant_events_forcalc <- relevant_events_treatment[relevant_events_treatment$begin==introduction,]
     cat(".")
-    relevant_events_forcalc$enoughdata <- NA
+    relevant_promotions <- promo_prod_date[promo_prod_date$productID == inspected_product,]
     #Was the inspected product available long enough before and after the event?
-    sum(apply(relevant_events_forcalc, 1, 
-            function(x) enoughdata(x['date'], x['storeID'], relevant_events_treatment, relevant_events_inspected, days_window)))
+    sum(apply(relevant_events_forcalc, 1, function(x) 
+        enoughdata(x['date'], x['storeID'], relevant_events_treatment, relevant_events_inspected, days_window, relevant_promotions)))
     
 }
 
-event_table_all$number_of_intros30 <- apply(event_table_all[,1:2], 1, function(x) numberofevents(x['treatment_productID'], x['inspected_productID'], 30, introduction = TRUE, events))
-event_table_all$number_of_outs30 <- apply(event_table_all[,1:2], 1, function(x) numberofevents(x['treatment_productID'], x['inspected_productID'], 30, introduction = FALSE, events))
+library(foreach)
+library(iterators)
+library(doParallel)
+cl <- makeCluster(2)
+registerDoParallel(cl)
+
+event_table_test
+foreach(x=iter(event_table_test[event_table_test$number_of_intros>0,1:2], by='row'), .combine='c') %dopar% numberofevents(as.character(x$treatment_productID), as.character(x$inspected_productID), 30, introduction = TRUE, events, promo_prod_date)
+
+event_table_all <- readRDS("event_table_all.RData")
+event_table_all <- event_table_all[event_table_all$number_of_events>10,]
+# event_table_test <- event_table_all[1000:2000,]
+event_table_all$number_of_intros30[event_table_all$number_of_intros>0] <- 
+    foreach(x=iter(event_table_all[event_table_all$number_of_intros>0,1:2], by='row'), .combine='c') %dopar% numberofevents(as.character(x$treatment_productID), as.character(x$inspected_productID), 30, introduction = TRUE, events, promo_prod_date)
+event_table_all$number_of_outs30[event_table_all$number_of_outs>0] <- 
+    foreach(x=iter(event_table_all[event_table_all$number_of_outs>0,1:2], by='row'), .combine='c') %dopar% numberofevents(as.character(x$treatment_productID), as.character(x$inspected_productID), 30, introduction = FALSE, events, promo_prod_date)
 event_table_all$number_of_events30 <- event_table_all$number_of_intros30 + event_table_all$number_of_outs30
 event_table_all <- event_table_all[event_table_all$number_of_events30>10,]
-event_table_all$number_of_intros60 <- apply(event_table_all[,1:2], 1, function(x) numberofevents(x['treatment_productID'], x['inspected_productID'], 60, introduction = TRUE, events))
-event_table_all$number_of_outs60 <- apply(event_table_all[,1:2], 1, function(x) numberofevents(x['treatment_productID'], x['inspected_productID'], 60, introduction = FALSE, events))
+saveRDS(event_table_all, "event_table_all30.RData")
+
+event_table_all$number_of_intros60[event_table_all$number_of_intros30>0] <- 
+    foreach(x=iter(event_table_all[event_table_all$number_of_intros30>0,1:2], by='row'), .combine='c') %dopar% numberofevents(as.character(x$treatment_productID), as.character(x$inspected_productID), 60, introduction = TRUE, events, promo_prod_date)
+event_table_all$number_of_outs60[event_table_all$number_of_outs30>0] <- 
+    foreach(x=iter(event_table_all[event_table_all$number_of_outs30>0,1:2], by='row'), .combine='c') %dopar% numberofevents(as.character(x$treatment_productID), as.character(x$inspected_productID), 60, introduction = FALSE, events, promo_prod_date)
 event_table_all$number_of_events60 <- event_table_all$number_of_intros60 + event_table_all$number_of_outs60
 event_table_all <- event_table_all[event_table_all$number_of_events60>10,]
-event_table_all$number_of_intros90 <- apply(event_table_all[,1:2], 1, function(x) numberofevents(x['treatment_productID'], x['inspected_productID'], 90, introduction = TRUE, events))
-event_table_all$number_of_outs90 <- apply(event_table_all[,1:2], 1, function(x) numberofevents(x['treatment_productID'], x['inspected_productID'], 90, introduction = FALSE, events))
+saveRDS(event_table_all, "event_table_all60.RData")
+
+event_table_all$number_of_intros90[event_table_all$number_of_intros60>0] <- 
+    foreach(x=iter(event_table_all[event_table_all$number_of_intros60>0,1:2], by='row'), .combine='c') %dopar% numberofevents(as.character(x$treatment_productID), as.character(x$inspected_productID), 90, introduction = TRUE, events, promo_prod_date)
+event_table_all$number_of_outs90[event_table_all$number_of_outs60>0] <- 
+    foreach(x=iter(event_table_all[event_table_all$number_of_outs60>0,1:2], by='row'), .combine='c') %dopar% numberofevents(as.character(x$treatment_productID), as.character(x$inspected_productID), 90, introduction = FALSE, events, promo_prod_date)
 event_table_all$number_of_events90 <- event_table_all$number_of_intros90 + event_table_all$number_of_outs90
 event_table_all <- event_table_all[event_table_all$number_of_events90>10,]
-
-
-
-calc_sales_ba <- function(edate, sID, relevant_sales, days_window){
-    edate <- as.Date(edate)
-    salesbefore <- sum(relevant_sales[storeID == sID &
-                                    date < edate &
-                                    date >= edate-days_window, quantity_sold_kg])
-    salesafter <- sum(relevant_sales[storeID == sID &
-                                    date >= edate &
-                                    date < edate+days_window, quantity_sold_kg])
-    return(list(salesbefore = salesbefore, salesafter = salesafter))
-}
-
-calc_sales_b <- function(edate, sID, relevant_sales, days_window){
-    edate <- as.Date(edate)
-    salesbefore <- sum(relevant_sales[storeID == sID &
-                                          date < edate &
-                                          date >= edate-days_window, quantity_sold_kg])
-    return(salesbefore)
-}
-system.time(apply(relevant_events_forcalc, 1, function(event) calc_sales_b(event['date'], event['storeID'], relevant_sales, days_window)))
-
-calc_sales_ba <- function(edate, sID, relevant_sales, days_window){
-    edate <- as.Date(edate)
-    salesbefore <- relevant_sales[storeID == sID &
-                                          date < edate &
-                                          date >= edate-days_window,][,sum(quantity_sold_kg)]
-    salesafter <- relevant_sales[storeID == sID &
-                                         date >= edate &
-                                         date < edate+days_window,][,sum(quantity_sold_kg)]
-    return(list(salesbefore = salesbefore, salesafter = salesafter))
-}
-
-system.time(apply(relevant_events_forcalc, 1, function(event) calc_sales_ba(event['date'], event['storeID'], relevant_sales, days_window)))
-diffindiff <- function(treatment_product, inspected_product, days_window, introduction,
-                       events, sales){
-    
-    #relevant_events_forcalc contains the events from which we potentially want to calculate a salesratio.
-    #relevant_events_treatment and relevant_events_inspected contain the events
-    # which are needed to check if the products were available for enough time.
-    relevant_events_treatment <- events[events$productID==treatment_product &
-                                  events[, inspected_product], 1:4]
-    relevant_events_inspected <- events[events$productID==inspected_product, 1:4]
-    relevant_events_forcalc <- relevant_events_treatment[relevant_events_treatment$begin==introduction,]
-    cat("relevant events selected\n")
-    relevant_events_forcalc$enoughdata <- NA
-    #Was the inspected product available long enough before and after the event?
-    relevant_events_forcalc$enoughdata <- apply(relevant_events_forcalc, 1, function(x) enoughdata(x['date'], x['storeID'], relevant_events_treatment, relevant_events_inspected, days_window))
-    relevant_events_forcalc <- relevant_events_forcalc[relevant_events_forcalc$enoughdata,]
-
-    cat("\nRelevant events with enough sales data found.\n")
-    cat("Number of events:")
-    cat(nrow(relevant_events_forcalc))
-    cat("\n")
-    relevant_events_forcalc$salesafter <- NA
-    relevant_events_forcalc$salesbefore <- NA
-    relevant_events_forcalc$salesratio <- NA
-    relevant_sales <- sales[productID == inspected_product,]
-    setkeyv(relevant_sales, c("storeID", "date"))
-    for(i in 1:nrow(relevant_events_forcalc)){
-        cat(i)
-        # shift function -> add zero rows to sales function (look at promotion_identification_smoothing.R)
-        relevant_events_forcalc$salesbefore[i] <- sum(relevant_sales[storeID == relevant_events_forcalc$storeID[i] &
-                                                                 date < relevant_events_forcalc$date[i] &
-                                                                 date >= relevant_events_forcalc$date[i]-days_window, quantity_sold_kg])
-        relevant_events_forcalc$salesafter[i] <- sum(relevant_sales[storeID == relevant_events_forcalc$storeID[i] &
-                                                                date >= relevant_events_forcalc$date[i] &
-                                                                date < relevant_events_forcalc$date[i]+days_window, quantity_sold_kg])
-    }
-    cat("\n")
-    relevant_events_forcalc$salesratio <- relevant_events_forcalc$salesafter/relevant_events_forcalc$salesbefore
-    relevant_events_forcalc <- relevant_events_forcalc[!is.na(relevant_events_forcalc$salesratio),]
-    return(relevant_events_forcalc)
-}
+saveRDS(event_table_all, "event_table_all90.RData")
