@@ -40,7 +40,8 @@ sales <- readRDS("sales.RData")
 id_pairs <- data.table(productID = "G13F03S01S04", storeID = 2784)
 
 #inputs and outputs of this function are data.table
-
+#This piece of code distributes sellIn-s among days until the next sellIn.
+#It does not seem to smooth the sales very effectively, that's why it was not developed into a function.
     datatosmooth <- merge(id_pairs, sales, by = c("storeID", "productID"))
     sales_daily <- data.table(date = seq(min(datatosmooth$date), max(datatosmooth$date)-1, by="days"),
                               quantity_sold_kg = as.numeric(NA))
@@ -66,7 +67,7 @@ ggplot(sales_daily, aes(x=date, y=quantity_sold_kg)) +
     geom_line() +
     theme_bw()
 
-#SELECT RELEVANT SALES
+#DIFFERENCE IN DIFFERENCES
 library(data.table)
 sales <- readRDS("sales.RData")
 events <- readRDS("events.RData")
@@ -74,41 +75,12 @@ promo_prod_date <- readRDS("promotion_dates.RData")
 events$date <- as.Date(events$date, "%Y%m%d")
 setkey(sales, productID)
 
-enoughdata <- function(date, storeID, relevant_events_treatment, relevant_events_inspected, days_window, relevant_promotions){
-    date <- as.Date(date)
-    datebefore <- date-days_window
-    dateafter <- date+days_window
-    enoughdata <- TRUE
-    
-    #Is the time window in the time period when we have data?
-    if(datebefore < as.Date("2015-01-01") || dateafter > as.Date("2016-03-15")){
-        enoughdata <- FALSE
-    }
-    
-    #Is there only one event for the treatment product in the given store within the time window?
-    else if(nrow(relevant_events_treatment[relevant_events_treatment$storeID==storeID &&
-                                      relevant_events_treatment$date >= datebefore &&
-                                      relevant_events_treatment$date < dateafter, ]) > 1){
-        enoughdata <- FALSE
-    }
-    
-    #Is there any event for the inspected product in the given store within the time window?
-    else if(nrow(relevant_events_treatment[relevant_events_inspected$storeID==storeID &&
-                                      relevant_events_inspected$date >= datebefore &&
-                                      relevant_events_inspected$date < dateafter, ]) > 0){
-        enoughdata <- FALSE
-    }
-    
-    #Has the inspected product a promotion in the given period?
-    else if(nrow(relevant_promotions[relevant_promotions$storeID==storeID &&
-                                relevant_promotions$promo_start_date >= datebefore-14 &&
-                                relevant_promotions$promo_start_date < dateafter, ]) > 0){
-        enoughdata <- FALSE
-    }
-    
-    return(enoughdata)
-}
-
+#This function asks for a treatment product - which was introduced to or taken out from assortment -
+#and and inspected product -which was available before and after the event.
+#Its output is a data frame (relevant_events_forcalc), which contains these events and for every event
+#a salesbefore, salesafter and salesratio variable.
+#These variable explain how the sales of the inspected product hanged in the given store after the event.
+#They are supposed to give us a proxy about the substitution effect between the two products.
 diffindiff <- function(treatment_product, inspected_product, days_window, introduction,
                        events, sales, promo_prod_date){
     
@@ -150,6 +122,45 @@ diffindiff <- function(treatment_product, inspected_product, days_window, introd
     return(relevant_events_forcalc)
 }
 
+# Notice that the enoughdata function is called from within the diffindiff function
+# This function selects asks for an event (defined by date and storeID)
+# and decides if this event has enough data around it to calculate a before-after sales ratio.
+enoughdata <- function(date, storeID, relevant_events_treatment, relevant_events_inspected, days_window, relevant_promotions){
+    date <- as.Date(date)
+    datebefore <- date-days_window
+    dateafter <- date+days_window
+    enoughdata <- TRUE
+    
+    #Is the time window in the time period when we have data?
+    if(datebefore < as.Date("2015-01-01") || dateafter > as.Date("2016-03-15")){
+        enoughdata <- FALSE
+    }
+    
+    #Is there only one event for the treatment product in the given store within the time window?
+    else if(nrow(relevant_events_treatment[relevant_events_treatment$storeID==storeID &&
+                                           relevant_events_treatment$date >= datebefore &&
+                                           relevant_events_treatment$date < dateafter, ]) > 1){
+        enoughdata <- FALSE
+    }
+    
+    #Is there any event for the inspected product in the given store within the time window?
+    else if(nrow(relevant_events_treatment[relevant_events_inspected$storeID==storeID &&
+                                           relevant_events_inspected$date >= datebefore &&
+                                           relevant_events_inspected$date < dateafter, ]) > 0){
+        enoughdata <- FALSE
+    }
+    
+    #Has the inspected product a promotion in the given period?
+    else if(nrow(relevant_promotions[relevant_promotions$storeID==storeID &&
+                                     relevant_promotions$promo_start_date >= datebefore-14 &&
+                                     relevant_promotions$promo_start_date < dateafter, ]) > 0){
+        enoughdata <- FALSE
+    }
+    
+    return(enoughdata)
+}
+
+#THIS PART OF THE CODE IS FOR TESTING THE DIFFINDIFF FUNCTION
 #test the time it takes
 treatment_product="G01F04S12S01"
 inspected_product="G01F01S01S01"
@@ -206,6 +217,9 @@ did3a <- readRDS("did3a.RData")
 did3b <- readRDS("did3b.RData")
 
 #NUMBER OF EVENTS TABLE BY PRODUCT PAIRS
+
+#Here we calculate the event_table_all data frame,
+#which tells us how many events are available for each product pair.
 library(reshape2)
 even <- events[,-c(1, 3, 4)]
 event_table_all <- aggregate(even[,-1], by=data.frame(even$productID), sum)
@@ -225,7 +239,10 @@ event_table_all <- event_table_all[as.character(event_table_all$treatment_produc
 event_table_all <- event_table_all[event_table_all$number_of_events>10,]
 saveRDS(event_table_all, "event_table_all.RData")
 
-
+#The numberofevents function counts for a given product pair the relevant number of events,
+#given constraints of a selected days_window.
+#Notice, that it uses the enoughdata function,
+#and the whole function is very similar to the first part of diffindiff.
 numberofevents <- function(treatment_product, inspected_product, days_window, introduction, events, promo_prod_date){
     relevant_events_treatment <- events[events$productID==treatment_product &
                                             events[, inspected_product], 1:4]
@@ -239,6 +256,8 @@ numberofevents <- function(treatment_product, inspected_product, days_window, in
     
 }
 
+#The next part of the code takes a lot of time to run,
+#it is meant to be run on a server or a powerful machine.
 library(foreach)
 library(iterators)
 library(doParallel)
