@@ -42,19 +42,20 @@ rm(neworder)
         		# model using all variables #
 ################################################################################
 # First Pass SVM model - (2 folds)
-control <- trainControl(method="cv", number=2)
+control <- trainControl(method="cv", number=1)
 seed <- 7
-metric <- "RMSE"
+metric <- "RMSE" #root MSE
 set.seed(seed)
 
 
-registerDoMC(cores = 3)
+registerDoMC(cores = 2)
 svm_tune <- train(avg_sales_per_day~., 
                     data=train, 
                     method="svmRadial", 
                     metric=metric, 
-                    tuneLength=8, 
-                    trControl=control, 
+                    tuneLength=1, 
+                    trControl=control,
+                    allowParallel = F
                     #preProcess = c("center", "scale")
                     )
 
