@@ -61,7 +61,7 @@ rf_default <- train(avg_sales_per_day~.,
                     metric=metric, 
                     tuneGrid=tunegrid, 
                     trControl=control, 
-                    importance=TRUE) #approx 3hrs
+                    importance=FALSE) #approx 3hrs
 print(rf_default)
 #varImp(rf_default) #need to set importance=TRUE in train() to be able to get this
 #varImp(rf_default$finalModel)

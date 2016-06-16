@@ -309,6 +309,7 @@ rm(stores_dummies, unique_element)
 
 
 
+
 ################################################################################
                         # k-means clustering #
 ################################################################################
@@ -482,32 +483,29 @@ plot(1:20, wss, type="b",
 
 # Fit 7 clusters
 fit <- kmeans(mktshare_storedummies, 7, iter.max = 100) 
+clustering4 <- data.frame(storeIDs, fit$cluster)
 #centroids <- aggregate(mktshareshelf, by=list(fit$cluster), FUN=mean)
 names(clustering4) <- c("storeID", "clustering4")
 
 #saveRDS(clustering4, "storeID_clustering4.RData")
 rm(mktshare_storedummies)
 
+
+
+
 ################################################################################
 ############## Save the clusterings ############################################
 ################################################################################
 
-#merge them 
+#merge them into one dataframe
 cluster = merge(clustering4,clustering3, by ="storeID")
 cluster = merge(cluster,clustering2, by = "storeID")
+
 #change the names so that they represent what the clusters are based on 
-names(cluster)=c("storeID","shelf_sales","sales_shelf","shelf_total")
+names(cluster)=c("storeID","shelf_sales_store","shelf_sales","shelf")
+
 #save it
 saveRDS(cluster,"cluster.RData")
 
 
 
-
-
-
-
-
-
-
-
-#
