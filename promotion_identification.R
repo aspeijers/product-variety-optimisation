@@ -3,8 +3,6 @@ library(ggplot2)
 
 
 
-
-
 stores= readRDS("stores.RData")
 
 # Look which stores we need 
@@ -115,13 +113,9 @@ for (i in 1:nrow(promo_group_filtered)) {
         
         # subset sales_promo1 for product j
         sales_promo1_pr1 = sales_promo1[productID==product1]
-
+        
+        # calculate sell-in ratios
         sales_promo1_pr1 = sales_promo1_pr1[,.(productID, date,quantity_sold_kg,simple_ratio = simple_ratio_function(quantity_sold_kg)), by = storeID]
-        
-        
-        #ggplot(sales_promo1_pr1, aes(x=date, y=simple_ratio, group = as.character(storeID), colour = as.character(storeID))) +
-            #geom_line() +
-            #theme_bw()
         
         # find 99th quantile for product j
         above = quantile(sales_promo1_pr1$simple_ratio, 0.99)
@@ -161,6 +155,15 @@ for (i in 1:nrow(promo_group_filtered)) {
                 promo_prod_date <- rbind(promo_prod_date, promo_prod_date_current)
             }
         }
+        
+        # plot for use in report (use first promo group and first product)
+#         ggplot(sales_promo1_pr1, aes(x=date, y=simple_ratio, group = as.character(storeID), colour = as.character(storeID))) +
+#             geom_line() +
+#             theme_bw() +
+#             theme(axis.title.x = element_blank(), legend.position="none") +
+#             ylab("sell-in ratio") +
+#             geom_hline(yintercept=above) +
+#             geom_vline(xintercept=c(as.numeric(promo_prod_date$promo_start_date), as.numeric(promo_prod_date$promo_start_date +14)), linetype=4 )
     }
 }
 

@@ -334,10 +334,14 @@ for (i in 2:20) {
 }
 
 # plot 
-plot(1:20, wss, type="b", 
-     xlab="Number of Clusters", 
-     ylab="Within groups sum of squares", 
-     main="Clustering 1: market share by sales")
+df <- data.frame(Clusters = 1:20, wwss=wss)
+ggplot(data=df, aes(x=Clusters, y=wwss, group=1)) +
+    geom_line(colour="blue") +
+    geom_point(colour="blue" ) +
+    theme_bw() +
+    ylab("Within groups sum of squares") +
+    xlab("Number of clusters") +
+    ggtitle("Clustering variables: market share by sell-in")
 # very uneven - bad clustering. Don't continue.
 
 ################################################################################
@@ -354,10 +358,14 @@ for (i in 2:20) {
 }
 
 # plot 
-plot(1:20, wss, type="b", 
-     xlab="Number of Clusters", 
-     ylab="Within groups sum of squares", 
-     main="Clustering 1a: market share by sales - no total store quantity")
+df <- data.frame(Clusters = 1:20, wwss=wss)
+ggplot(data=df, aes(x=Clusters, y=wwss, group=1)) +
+    geom_line(colour="blue") +
+    geom_point(colour="blue" ) +
+    theme_bw() +
+    ylab("Within groups sum of squares") +
+    xlab("Number of clusters") +
+    ggtitle("Clustering variables: market share by sell-in - no total quantity")
 rm(mktsharesales)
 # still very uneven. Don't continue. 
 
@@ -384,10 +392,20 @@ for (i in 2:20) {
 }
 
 # plot 
-plot(1:20, wss, type="b", 
-     xlab="Number of Clusters", 
-     ylab="Within groups sum of squares", 
-     main="Clustering 2: market share by shelf space")
+df <- data.frame(Clusters = 1:20, wwss=wss)
+ggplot(data=df, aes(x=Clusters, y=wwss, group=1)) +
+    geom_line(colour="dodgerblue2") +
+    geom_point(colour="dodgerblue2", size=3 ) +
+    geom_vline(xintercept = 6, linetype=4) +
+    theme_bw() +
+    theme(plot.title = element_text(size = rel(2)),
+          axis.title.y = element_text(size = rel(1.5)),
+          axis.title.x = element_text(size = rel(1.5)),
+          axis.text.x  = element_text(size= rel(1.2)),
+          axis.text.y = element_text(size= rel(1.2)) ) +
+    ylab("Within groups sum of squares") +
+    xlab("Number of clusters") +
+    ggtitle("Clustering variables: \n market share by shelf space") 
 # choose 6 clusters
 
 
@@ -430,10 +448,20 @@ for (i in 2:20) {
 }
 
 # plot 
-plot(1:20, wss, type="b", 
-     xlab="Number of Clusters", 
-     ylab="Within groups sum of squares", 
-     main="Clustering 3: market share by sales and shelf space")
+df <- data.frame(Clusters = 1:20, wwss=wss)
+ggplot(data=df, aes(x=Clusters, y=wwss, group=1)) +
+    geom_line(colour="dodgerblue2") +
+    geom_point(colour="dodgerblue2", size=3 ) +
+    geom_vline(xintercept = 7, linetype=4) +
+    theme_bw() +
+    theme(plot.title = element_text(size = rel(2)),
+          axis.title.y = element_text(size = rel(1.5)),
+          axis.title.x = element_text(size = rel(1.5)),
+          axis.text.x  = element_text(size= rel(1.2)),
+          axis.text.y = element_text(size= rel(1.2)) ) +
+    ylab("Within groups sum of squares") +
+    xlab("Number of clusters") +
+    ggtitle("Clustering variables: \n market share by sell-in and by shelf space") 
 # choose 7 clusters
 
 # Fit 7 clusters
@@ -475,10 +503,20 @@ for (i in 2:20) {
 }
 
 # plot 
-plot(1:20, wss, type="b", 
-     xlab="Number of Clusters", 
-     ylab="Within groups sum of squares", 
-     main="Clustering 4: market share by sales and shelf space and store variables")
+df <- data.frame(Clusters = 1:20, wwss=wss)
+ggplot(data=df, aes(x=Clusters, y=wwss, group=1)) +
+    geom_line(colour="dodgerblue2") +
+    geom_point(colour="dodgerblue2", size=3 ) +
+    geom_vline(xintercept = 7, linetype=4) +
+    theme_bw() +
+    theme(plot.title = element_text(size = rel(2)),
+          axis.title.y = element_text(size = rel(1.5)),
+          axis.title.x = element_text(size = rel(1.5)),
+          axis.text.x  = element_text(size= rel(1.2)),
+          axis.text.y = element_text(size= rel(1.2)) ) +
+    ylab("Within groups sum of squares") +
+    xlab("Number of clusters") +
+    ggtitle("Clustering variables: \n market share by sell-in and shelf space and store variables") 
 # choose 7 clusters
 
 # Fit 7 clusters
