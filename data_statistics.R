@@ -28,5 +28,9 @@ for(i in subFam_statistics$subFam){
 
 length(avg_subFams)/length(unique(products$subFam))
 
-hist(products$expirationDay,breaks = length(table(products$expirationDays)), xlab = "Number of Expiration Days",xlim = range(0,max(products$expirationDay)),main="")
-barplot(products$flavor, xlab = "Number of Expiration Days",main="")
+hist(products$expirationDay,breaks = length(table(products$expirationDays)), xlab = "Number of Expiration Days",xlim = c(0,200),main="")
+
+
+variety  = sales[,.(num_products = length(unique(productID))), by = storeID]
+
+hist(variety$num_products,xlab = "Number of Products per Store", main="", xlim = c(0,250), ylim = c(0,800))
