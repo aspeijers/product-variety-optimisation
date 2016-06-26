@@ -1,0 +1,391 @@
+---
+title: "Clusterings"
+author: "Anneke Speijers"
+date: "25 June 2016"
+output: html_document
+---
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.width=12, fig.height= 8}
+# producing differenc clusterings using different variable subsets
+
+library(data.table)
+library(ggplot2)
+library(grid)
+library(gridExtra)
+
+setwd("~/Desktop/BGSE/Term3/MasterProject/GSE")
+
+# read in data
+stores_dummies_mktsharesales <- readRDS("stores_dummies_mktsharesales.RData")
+stores_dummies_mktshareshelf <- readRDS("stores_dummies_mktshareshelf.RData")
+
+# remove store dummy and total sell-in columns from one table (since they are common to both)
+stores_dummies_mktshareshelf <- stores_dummies_mktshareshelf[,1:244, with=FALSE]
+stores_dummies_mktshareshelf[,store_total_quantity:=NULL]
+
+# rename shelf space columns
+names(stores_dummies_mktshareshelf)[3:ncol(stores_dummies_mktshareshelf)] <- paste0(names(stores_dummies_mktshareshelf)[3:ncol(stores_dummies_mktshareshelf)], "_ss")
+
+# combine data into one table
+stores_dummies_mktshares <- merge(stores_dummies_mktsharesales, stores_dummies_mktshareshelf, by="storeID") 
+rm(stores_dummies_mktsharesales, stores_dummies_mktshareshelf)
+
+# write function to produce clusters and plot
+# plot_title is a string stating which variables are included in the clustering and which are not
+# features is a dataframe where each column is a store variable.
+clustering <- function( plot_title, features, max_clusters=20, max_iters=100 ) {
+    
+    # Calculate the within group sum of squares for different k
+    wss <- (nrow(features)-1)*sum(apply(as.data.frame(features),2,var))
+    
+    for (i in 2:20) {
+        wss[i] <- sum( kmeans(features, centers=i, iter.max=max_iters)$withinss )
+    }
+    
+    df <- data.frame(Clusters = 1:20, wwss=wss)
+    clust_plot <- ggplot(data=df, aes(x=Clusters, y=wwss, group=1)) + 
+        geom_line(colour="dodgerblue2") +
+        geom_point(colour="dodgerblue2", size=1 ) +
+        #geom_vline(xintercept = 7, linetype=4) +
+        theme_bw() +
+        theme(plot.title = element_text(size = rel(0.5)),
+              axis.title.y = element_text(size = rel(0.5)),
+              axis.title.x = element_text(size = rel(0.5)),
+              axis.text.x  = element_text(size= rel(0.4)),
+              axis.text.y = element_text(size= rel(0.4)) ) +
+        ylab("Within groups sum of squares") +
+        xlab("Number of clusters") +
+        ggtitle( paste0("Clustering variables: \n", plot_title) ) 
+    
+    return(list(clusters=df, plot=clust_plot))
+ 
+}
+
+# save storeID's then remove from dataset
+storeIDs <- as.integer(as.character(stores_dummies_mktshares$storeID))
+stores_dummies_mktshares[,storeID:=NULL]
+
+################################################################################
+   # Clusterings using all mkt share variables (ie prod, subFam, fam,...etc) #
+################################################################################
+
+# all mkt share by sell-in variables
+title1  <- "mkt share sell-in (no total sell-in or store dummies)"
+feat1   <- stores_dummies_mktshares[,1:242, with=FALSE]
+feat1   <- feat1[,store_total_quantity:=NULL]
+clust1  <- clustering( title1, feat1 )
+
+title2  <- "mkt share sell-in with total sell-in (no store dummies)"
+feat2   <- stores_dummies_mktshares[,1:242, with=FALSE]
+clust2  <- clustering( title2, feat2 )
+
+title3  <- "mkt share sell-in with store dummies (no total sell-in)"
+feat3   <- stores_dummies_mktshares[,1:1111, with=FALSE]
+feat3   <- feat3[,store_total_quantity:=NULL]
+clust3  <- clustering( title3, feat3 )
+
+title4  <- "mkt share sell-in with total sell-in and store dummies"
+feat4   <- stores_dummies_mktshares[,1:1111, with=FALSE]
+clust4  <- clustering( title4, feat4 )
+
+# all mkt share by shelf space variables
+title5  <- "mkt share shelfspace (no total ss or store dummies)"
+feat5   <- stores_dummies_mktshares[,1112:1353, with=FALSE]
+feat5   <- feat5[,total_shelf_space:=NULL]
+clust5  <- clustering( title5, feat5 )
+
+title6  <- "mkt share shelfspace with total ss (no store dummies)"
+feat6   <- stores_dummies_mktshares[,1112:1353, with=FALSE]
+clust6  <- clustering( title6, feat6 )
+
+title7  <- "mkt share shelfspace with store dummies (no total ss)"
+feat7   <- stores_dummies_mktshares[,243:1353, with=FALSE]
+feat7   <- feat7[,total_shelf_space:=NULL]
+clust7  <- clustering( title7, feat7 )
+
+title8  <- "mkt share shelfspace with total ss and store dummies"
+feat8   <- stores_dummies_mktshares[,243:1353, with=FALSE]
+clust8  <- clustering( title8, feat8 )
+
+# all mkt share by sell-in AND all mkt share by shelf space variables - no store dummies
+title9  <- "mkt share sell-in and shelfspace (no total sell-in, total ss or store dummies)"
+feat9   <- stores_dummies_mktshares[,c(1:242, 1112:1353), with=FALSE]
+feat9   <- feat9[,c("store_total_quantity", "total_shelf_space"):=NULL]
+clust9  <- clustering( title9, feat9 )
+
+title10  <- "mkt share sell-in and shelfspace with total sell-in (no total ss or store dummies)"
+feat10   <- stores_dummies_mktshares[,c(1:242, 1112:1353), with=FALSE]
+feat10   <- feat10[,total_shelf_space:=NULL]
+clust10  <- clustering( title10, feat10 )
+
+title11  <- "mkt share sell-in and shelfspace with total ss (no total sell-in or store dummies)"
+feat11   <- stores_dummies_mktshares[,c(1:242, 1112:1353), with=FALSE]
+feat11   <- feat11[,store_total_quantity:=NULL]
+clust11  <- clustering( title11, feat11 )
+
+title12  <- "mkt share sell-in and shelfspace with total sell-in and total ss (no store dummies)"
+feat12   <- stores_dummies_mktshares[,c(1:242, 1112:1353), with=FALSE]
+clust12  <- clustering( title12, feat12 )
+
+# all mkt share by sell-in AND all mkt share by shelf space variables - with store dummies
+title13  <- "mkt share sell-in and shelfspace with store dummies (no total sell-in or total ss)"
+feat13   <- as.data.table(as.data.frame(stores_dummies_mktshares))
+feat13   <- feat13[,c("store_total_quantity", "total_shelf_space"):=NULL]
+clust13  <- clustering( title13, feat13 )
+
+title14  <- "mkt share sell-in and shelfspace with total sell-in and store dummies (no total ss)"
+feat14   <- as.data.table(as.data.frame(stores_dummies_mktshares))
+feat14   <- feat14[,total_shelf_space:=NULL]
+clust14  <- clustering( title14, feat14 )
+
+title15  <- "mkt share sell-in and shelfspace with total ss and store dummies (no total sell-in)"
+feat15   <- as.data.table(as.data.frame(stores_dummies_mktshares))
+feat15   <- feat15[,store_total_quantity:=NULL]
+clust15  <- clustering( title15, feat15 )
+
+title16  <- "mkt share sell-in and shelfspace with total sell-in, total ss and store dummies"
+feat16   <- as.data.table(as.data.frame(stores_dummies_mktshares))
+clust16  <- clustering( title16, feat16 )
+
+################################################################################
+   # Clusterings using ONLY PRODUCT mkt share variables #
+################################################################################
+# product mkt share by sell-in 
+title17  <- "PROD mkt share sell-in (no total sell-in or store dummies)"
+feat17   <- stores_dummies_mktshares[,1:108, with=FALSE]
+feat17   <- feat17[,store_total_quantity:=NULL]
+clust17  <- clustering( title17, feat17 )
+
+title18  <- "PROD mkt share sell-in with total sell-in (no store dummies)"
+feat18   <- stores_dummies_mktshares[,1:108, with=FALSE]
+clust18  <- clustering( title18, feat18 )
+
+title19  <- "PROD mkt share sell-in with store dummies (no total sell-in)"
+feat19   <- stores_dummies_mktshares[,c(1:108,243:1111), with=FALSE]
+feat19   <- feat19[,store_total_quantity:=NULL]
+clust19  <- clustering( title19, feat19 )
+
+title20  <- "PROD mkt share sell-in with total sell-in and store dummies"
+feat20   <- stores_dummies_mktshares[,c(1:108,243:1111), with=FALSE]
+clust20  <- clustering( title20, feat20 )
+
+# product mkt share by shelf space 
+title21  <- "PROD mkt share shelfspace (no total ss or store dummies)"
+feat21   <- stores_dummies_mktshares[,1112:1219, with=FALSE]
+feat21   <- feat21[,total_shelf_space:=NULL]
+clust21  <- clustering( title21, feat21 )
+
+title22  <- "PROD mkt share shelfspace with total ss (no store dummies)"
+feat22   <- stores_dummies_mktshares[,1112:1219, with=FALSE]
+clust22  <- clustering( title22, feat22 )
+
+title23  <- "PROD mkt share shelfspace with store dummies (no total ss)"
+feat23   <- stores_dummies_mktshares[,243:1219, with=FALSE]
+feat23   <- feat23[,total_shelf_space:=NULL]
+clust23  <- clustering( title23, feat23 )
+
+title24  <- "PROD mkt share shelfspace with total ss and store dummies"
+feat24   <- stores_dummies_mktshares[,243:1219, with=FALSE]
+clust24  <- clustering( title24, feat24 )
+
+# product mkt share by sell-in AND product mkt share by shelf space - no store dummies
+title25  <- "PROD mkt share sell-in and shelfspace (no total sell-in, total ss or store dummies)"
+feat25   <- stores_dummies_mktshares[,c(1:108, 1112:1219), with=FALSE]
+feat25   <- feat25[,c("store_total_quantity", "total_shelf_space"):=NULL]
+clust25  <- clustering( title25, feat25 )
+
+title26  <- "PROD mkt share sell-in and shelfspace with total sell-in (no total ss or store dummies)"
+feat26   <- stores_dummies_mktshares[,c(1:108, 1112:1219), with=FALSE]
+feat26   <- feat26[,total_shelf_space:=NULL]
+clust26  <- clustering( title26, feat26 )
+
+title27  <- "PROD mkt share sell-in and shelfspace with total ss (no total sell-in or store dummies)"
+feat27   <- stores_dummies_mktshares[,c(1:108, 1112:1219), with=FALSE]
+feat27   <- feat27[,store_total_quantity:=NULL]
+clust27  <- clustering( title27, feat27 )
+
+title28  <- "PROD mkt share sell-in and shelfspace with total sell-in and total ss (no store dummies)"
+feat28   <- stores_dummies_mktshares[,c(1:108, 1112:1219), with=FALSE]
+clust28  <- clustering( title28, feat28 )
+
+# product mkt share by sell-in AND product mkt share by shelf space - with store dummies
+title29  <- "PROD mkt share sell-in and shelfspace with store dummies (no total sell-in or total ss)"
+feat29   <- stores_dummies_mktshares[,c(1:108, 243:1111, 1112:1219),with=FALSE]
+feat29   <- feat29[,c("store_total_quantity", "total_shelf_space"):=NULL]
+clust29  <- clustering( title29, feat29 )
+
+title30  <- "PROD mkt share sell-in and shelfspace with total sell-in and store dummies (no total ss)"
+feat30   <- stores_dummies_mktshares[,c(1:108, 243:1111, 1112:1219),with=FALSE]
+feat30   <- feat30[,total_shelf_space:=NULL]
+clust30  <- clustering( title30, feat30 )
+
+title31  <- "PROD mkt share sell-in and shelfspace with total ss and store dummies (no total sell-in)"
+feat31   <- stores_dummies_mktshares[,c(1:108, 243:1111, 1112:1219),with=FALSE]
+feat31   <- feat31[,store_total_quantity:=NULL]
+clust31  <- clustering( title31, feat31 )
+
+title32  <- "PROD mkt share sell-in and shelfspace with total sell-in, total ss and store dummies"
+feat32   <- stores_dummies_mktshares[,c(1:108, 243:1111, 1112:1219),with=FALSE]
+clust32  <- clustering( title32, feat32 )
+
+################################################################################
+   # Clusterings using ONLY PRODUCTVAR mkt share variables #
+################################################################################
+# prodvar mkt share variables by sell-in 
+title33  <- "PRODVAR mkt share sell-in (no total sell-in or store dummies)"
+feat33   <- stores_dummies_mktshares[,108:242, with=FALSE]
+feat33   <- feat33[,store_total_quantity:=NULL]
+clust33  <- clustering( title33, feat33 )
+
+title34  <- "PRODVAR mkt share sell-in with total sell-in (no store dummies)"
+feat34   <- stores_dummies_mktshares[,108:242, with=FALSE]
+clust34  <- clustering( title34, feat34 )
+
+title35  <- "PRODVAR mkt share sell-in with store dummies (no total sell-in)"
+feat35   <- stores_dummies_mktshares[,c(108:242,243:1111), with=FALSE]
+feat35   <- feat35[,store_total_quantity:=NULL]
+clust35  <- clustering( title35, feat35 )
+
+title36  <- "PRODVAR mkt share sell-in with total sell-in and store dummies"
+feat36   <- stores_dummies_mktshares[,c(108:242,243:1111), with=FALSE]
+clust36  <- clustering( title36, feat36 )
+
+# prodvar mkt share variables by shelf space 
+title37  <- "PRODVAR mkt share shelfspace (no total ss or store dummies)"
+feat37   <- stores_dummies_mktshares[,c(1112, 1220:1353), with=FALSE]
+feat37   <- feat37[,total_shelf_space:=NULL]
+clust37  <- clustering( title37, feat37 )
+
+title38  <- "PRODVAR mkt share shelfspace with total ss (no store dummies)"
+feat38   <- stores_dummies_mktshares[,c(1112, 1220:1353), with=FALSE]
+clust38  <- clustering( title38, feat38 )
+
+title39  <- "PRODVAR mkt share shelfspace with store dummies (no total ss)"
+feat39   <- stores_dummies_mktshares[,c(1112, 243:1111, 1220:1353), with=FALSE]
+feat39   <- feat39[,total_shelf_space:=NULL]
+clust39  <- clustering( title39, feat39 )
+
+title40  <- "PRODVAR mkt share shelfspace with total ss and store dummies"
+feat40   <- stores_dummies_mktshares[,c(1112, 243:1111, 1220:1353), with=FALSE]
+clust40  <- clustering( title40, feat40 )
+
+# prodvar mkt share by sell-in variables AND prodvar mkt share by shelf space variables - no store dummies
+title41  <- "PRODVAR mkt share sell-in and shelfspace (no total sell-in, total ss or store dummies)"
+feat41   <- stores_dummies_mktshares[,c(108:242, 1112, 1220:1353), with=FALSE]
+feat41   <- feat41[,c("store_total_quantity", "total_shelf_space"):=NULL]
+clust41  <- clustering( title41, feat41 )
+
+title42  <- "PRODVAR mkt share sell-in and shelfspace with total sell-in (no total ss or store dummies)"
+feat42   <- stores_dummies_mktshares[,c(108:242, 1112, 1220:1353), with=FALSE]
+feat42   <- feat42[,total_shelf_space:=NULL]
+clust42  <- clustering( title42, feat42 )
+
+title43  <- "PRODVAR mkt share sell-in and shelfspace with total ss (no total sell-in or store dummies)"
+feat43   <- stores_dummies_mktshares[,c(108:242, 1112, 1220:1353), with=FALSE]
+feat43   <- feat43[,store_total_quantity:=NULL]
+clust43  <- clustering( title43, feat43 )
+
+title44  <- "PRODVAR mkt share sell-in and shelfspace with total sell-in and total ss (no store dummies)"
+feat44   <- stores_dummies_mktshares[,c(108:242, 1112, 1220:1353), with=FALSE]
+clust44  <- clustering( title44, feat44 )
+
+# prodvar mkt share by sell-in variables AND prodvar mkt share by shelf space variables  - with store dummies
+title45  <- "PRODVAR mkt share sell-in and shelfspace with store dummies (no total sell-in or total ss)"
+feat45   <- stores_dummies_mktshares[,c(108:242, 243:1111, 1112, 1220:1353),with=FALSE]
+feat45   <- feat45[,c("store_total_quantity", "total_shelf_space"):=NULL]
+clust45  <- clustering( title45, feat45 )
+
+title46  <- "PRODVAR mkt share sell-in and shelfspace with total sell-in and store dummies (no total ss)"
+feat46   <- stores_dummies_mktshares[,c(108:242, 243:1111, 1112, 1220:1353),with=FALSE]
+feat46   <- feat46[,total_shelf_space:=NULL]
+clust46  <- clustering( title46, feat46 )
+
+title47  <- "PRODVAR mkt share sell-in and shelfspace with total ss and store dummies (no total sell-in)"
+feat47   <- stores_dummies_mktshares[,c(108:242, 243:1111, 1112, 1220:1353),with=FALSE]
+feat47   <- feat47[,store_total_quantity:=NULL]
+clust47  <- clustering( title47, feat47 )
+
+title48  <- "PRODVAR mkt share sell-in and shelfspace with total sell-in, total ss and store dummies"
+feat48   <- stores_dummies_mktshares[,c(108:242, 243:1111, 1112, 1220:1353),with=FALSE]
+clust48  <- clustering( title48, feat48 )
+
+
+```
+
+## All all market share variables (product, subFam, fam, etc)
+#### All mkt share by sell-in variables and variants
+```{r, echo=FALSE}
+# plot different clusterings
+grid.arrange(clust1$plot, clust2$plot, clust3$plot, clust4$plot, ncol = 2)
+```
+
+
+#### All mkt share by shelf space variables and variants
+```{r, echo=FALSE}
+grid.arrange(clust5$plot, clust6$plot, clust7$plot, clust8$plot, ncol = 2)
+```
+
+
+#### All mkt share by sell-in and shelf space variables and variants (without store dummies)
+```{r, echo=FALSE}
+grid.arrange(clust9$plot, clust10$plot, clust11$plot, clust12$plot, ncol = 2)
+```
+
+
+#### All mkt share by sell-in and shelf space variables and variants (with store dummies)
+```{r, echo=FALSE}
+grid.arrange(clust13$plot, clust14$plot, clust15$plot, clust16$plot, ncol = 2)
+```
+
+
+## Only PRODUCT market share variables 
+#### PRODUCT mkt share by sell-in and variants
+```{r, echo=FALSE}
+# plot different clusterings
+grid.arrange(clust17$plot, clust18$plot, clust19$plot, clust20$plot, ncol = 2)
+```
+
+
+#### PRODUCT mkt share by shelf space and variants
+```{r, echo=FALSE}
+grid.arrange(clust21$plot, clust22$plot, clust23$plot, clust24$plot, ncol = 2)
+```
+
+
+#### PRODUCT mkt share by sell-in and shelf space and variants (without store dummies)
+```{r, echo=FALSE}
+grid.arrange(clust25$plot, clust26$plot, clust27$plot, clust28$plot, ncol = 2)
+```
+
+
+#### PRODUCT mkt share by sell-in and shelf space and variants (with store dummies)
+```{r, echo=FALSE}
+grid.arrange(clust29$plot, clust30$plot, clust31$plot, clust32$plot, ncol = 2)
+```
+
+
+## Only PRODVAR market share variables 
+#### PRODVAR mkt share by sell-in and variants
+```{r, echo=FALSE}
+# plot different clusterings
+grid.arrange(clust33$plot, clust34$plot, clust35$plot, clust36$plot, ncol = 2)
+```
+
+
+#### PRODVAR mkt share by shelf space and variants
+```{r, echo=FALSE}
+grid.arrange(clust37$plot, clust38$plot, clust39$plot, clust40$plot, ncol = 2)
+```
+
+
+#### PRODVAR mkt share by sell-in and shelf space and variants (without store dummies)
+```{r, echo=FALSE}
+grid.arrange(clust41$plot, clust42$plot, clust43$plot, clust44$plot, ncol = 2)
+```
+
+
+#### PRODVAR mkt share by sell-in and shelf space and variants (with store dummies)
+```{r, echo=FALSE}
+grid.arrange(clust45$plot, clust46$plot, clust47$plot, clust48$plot, ncol = 2)
+```

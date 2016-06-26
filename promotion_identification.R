@@ -156,12 +156,31 @@ for (i in 1:nrow(promo_group_filtered)) {
             }
         }
         
-        # plot for use in report (use first promo group and first product)
-#         ggplot(sales_promo1_pr1, aes(x=date, y=simple_ratio, group = as.character(storeID), colour = as.character(storeID))) +
-#             geom_line() +
+#         # plots for use in report (use first promo group and first product)
+#         # for first plot use storeID 3230
+#         df <- sales_promo1_pr1[storeID=="3230"]
+#         ggplot(df, aes(x=date, y=simple_ratio)) +
+#             geom_line(col="deepskyblue2", size=0.8) +
 #             theme_bw() +
-#             theme(axis.title.x = element_blank(), legend.position="none") +
-#             ylab("sell-in ratio") +
+#             theme(axis.title.x = element_blank(), 
+#                   legend.position="none",
+#                   axis.title.y = element_text(size = rel(1.5)),
+#                   axis.title.x = element_text(size = rel(1.5)),
+#                   axis.text.x  = element_text(size= rel(1.2)),
+#                   axis.text.y = element_text(size= rel(1.2)) ) +
+#             ylab("sell-in today / previous sell-in")
+#                
+#         # plot 2
+#         ggplot(sales_promo1_pr1, aes(x=date, y=simple_ratio, group = as.character(storeID), colour = as.character(storeID))) +
+#             geom_line(size=0.7) +
+#             theme_bw() +
+#             theme(axis.title.x = element_blank(), 
+#                   legend.position="none",
+#                   axis.title.y = element_text(size = rel(1.5)),
+#                   axis.title.x = element_text(size = rel(1.5)),
+#                   axis.text.x  = element_text(size= rel(1.2)),
+#                   axis.text.y = element_text(size= rel(1.2)) ) +
+#             ylab("sell-in today / previous sell-in") +
 #             geom_hline(yintercept=above) +
 #             geom_vline(xintercept=c(as.numeric(promo_prod_date$promo_start_date), as.numeric(promo_prod_date$promo_start_date +14)), linetype=4 )
     }

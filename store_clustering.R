@@ -1,9 +1,19 @@
-# do 5 different types of clustering on the entire master table and then evaluate clusters using CV
+# This file is split into the following sections. 
+# 1) Convert all variables in the master table to dummy variables for each store
+# 2) Cluster the stores based on various subsets of these variables. 
+# nb. subsets have been chosen via logical reasoning. Clustering with other variable
+# subsets is done in the file "store_clustering_1.Rmd"
 
 # load packages
 library(data.table)
 library(dummies)
+library(ggplot2)
+library(grid)
+library(gridExtra)
 
+################################################################################
+                    # 1) Create stores_dummies table #
+################################################################################
 # read in master
 master <- readRDS("master_mktshare.RData")
 
@@ -21,8 +31,8 @@ master <- master[,(factor_vars):=lapply(.SD, as.factor),.SDcols=factor_vars, wit
 rm(factor_vars)
 
 ################################################################################
-# create mkt share by shelf space dummies #
-################################################################################
+# Create mkt share by shelf space dummies
+
 # make copy of master for calculating mkt share by shelf space dummies
 master_shelf <- as.data.table(as.data.frame(master))
 
@@ -161,10 +171,18 @@ rm(dummy_matrix, dummy_vars, i)
 saveRDS(stores_dummies, "stores_dummies_mktshareshelf.RData")
 rm(stores_dummies)
 
+# standardise store total shelf space variable
+stores_dummies_mktshareshelf <- readRDS("stores_dummies_mktshareshelf.RData")
+#min_ss <- min(stores_dummies_mktshareshelf$total_shelf_space)
+#max_ss <- max(stores_dummies_mktshareshelf$total_shelf_space)
+#stores_dummies_mktshareshelf$total_shelf_space <- (stores_dummies_mktshareshelf$total_shelf_space - min_ss)/(max_ss - min_ss)
+stores_dummies_mktshareshelf$total_shelf_space <- scale(stores_dummies_mktshareshelf$total_shelf_space)
+plot(stores_dummies_mktshareshelf$total_shelf_space)
+saveRDS(stores_dummies_mktshareshelf, "stores_dummies_mktshareshelf.RData")
 
 ################################################################################
-# with mkt share for sales
-################################################################################
+# Create market share by sell-in dummies 
+
 # make copy of master for calculating mkt share by sales dummies
 master_sales <- as.data.table(as.data.frame(master))
 
@@ -311,239 +329,200 @@ rm(stores_dummies, unique_element)
 
 
 ################################################################################
-                        # k-means clustering #
+                        # 2) k-means clustering #
 ################################################################################
-### Clustering 1: all mkt share by sales + total store quantity. No other store dummies. 
-
 # read in data
 stores_dummies_mktsharesales <- readRDS("stores_dummies_mktsharesales.RData")
-
-# remove store variables (except total store quantity)
-mktsharesales <- stores_dummies_mktsharesales[,1:243, with=FALSE]
-
-# separate storeID into a different vector
-storeIDs <- mktsharesales$storeID
-mktsharesales[,storeID:=NULL]
-
-
-# Calculate the within group sum of squares for different k
-wss <- (nrow(mktsharesales)-1)*sum(apply(as.data.frame(mktsharesales),2,var))
-
-for (i in 2:20) {
-    wss[i] <- sum(kmeans(mktsharesales,centers=i, iter.max=100)$withinss)
-}
-
-# plot 
-df <- data.frame(Clusters = 1:20, wwss=wss)
-ggplot(data=df, aes(x=Clusters, y=wwss, group=1)) +
-    geom_line(colour="blue") +
-    geom_point(colour="blue" ) +
-    theme_bw() +
-    ylab("Within groups sum of squares") +
-    xlab("Number of clusters") +
-    ggtitle("Clustering variables: market share by sell-in")
-# very uneven - bad clustering. Don't continue.
-
-################################################################################
-### Clustering 1a: all mkt share by sales but NO total store quantity. No other store dummies. 
-
-# remove store_total_quantity
-mktsharesales[, store_total_quantity:=NULL]
-
-# Calculate the within group sum of squares for different k
-wss <- (nrow(mktsharesales)-1)*sum(apply(as.data.frame(mktsharesales),2,var))
-
-for (i in 2:20) {
-    wss[i] <- sum(kmeans(mktsharesales,centers=i, iter.max=100)$withinss)
-}
-
-# plot 
-df <- data.frame(Clusters = 1:20, wwss=wss)
-ggplot(data=df, aes(x=Clusters, y=wwss, group=1)) +
-    geom_line(colour="blue") +
-    geom_point(colour="blue" ) +
-    theme_bw() +
-    ylab("Within groups sum of squares") +
-    xlab("Number of clusters") +
-    ggtitle("Clustering variables: market share by sell-in - no total quantity")
-rm(mktsharesales)
-# still very uneven. Don't continue. 
-
-
-################################################################################
-### Clustering 2: all mkt share by shelf space + total store quantity. No other store dummies. 
-
-# read in data
 stores_dummies_mktshareshelf <- readRDS("stores_dummies_mktshareshelf.RData")
 
-# remove store variables (except total store quantity)
-mktshareshelf <- stores_dummies_mktshareshelf[,1:244, with=FALSE]
+# remove store dummy and total sell-in columns from one table (since they are common to both)
+stores_dummies_mktshareshelf <- stores_dummies_mktshareshelf[,1:244, with=FALSE]
+stores_dummies_mktshareshelf[,store_total_quantity:=NULL]
 
-# separate storeID into a different vector
-storeIDs <- mktshareshelf$storeID
-mktshareshelf[,storeID:=NULL]
+# rename shelf space columns
+names(stores_dummies_mktshareshelf)[3:ncol(stores_dummies_mktshareshelf)] <- paste0(names(stores_dummies_mktshareshelf)[3:ncol(stores_dummies_mktshareshelf)], "_ss")
 
+# combine data into one table
+stores_dummies_mktshares <- merge(stores_dummies_mktsharesales, stores_dummies_mktshareshelf, by="storeID") 
+rm(stores_dummies_mktsharesales, stores_dummies_mktshareshelf)
 
-# Calculate the within group sum of squares for different k
-wss <- (nrow(mktshareshelf)-1)*sum(apply(as.data.frame(mktshareshelf),2,var))
-
-for (i in 2:20) {
-    wss[i] <- sum(kmeans(mktshareshelf,centers=i, iter.max=100)$withinss)
+# write function to produce clusters and plot
+# plot_title is a string stating which variables are included in the clustering and which are not
+# features is a dataframe where each column is a store variable.
+clustering <- function( plot_title, features, max_clusters=20, max_iters=100 ) {
+    
+    # Calculate the within group sum of squares for different k
+    wss <- (nrow(features)-1)*sum(apply(as.data.frame(features),2,var))
+    
+    for (i in 2:20) {
+        wss[i] <- sum( kmeans(features, centers=i, iter.max=max_iters)$withinss )
+    }
+    
+    df <- data.frame(Clusters = 1:20, wwss=wss)
+    clust_plot <- ggplot(data=df, aes(x=Clusters, y=wwss, group=1)) + 
+        geom_line(colour="dodgerblue2") +
+        geom_point(colour="dodgerblue2", size=3 ) +
+        #geom_vline(xintercept = 7, linetype=4) +
+        theme_bw() +
+        theme(plot.title = element_text(size = rel(1.5)),
+              axis.title.y = element_text(size = rel(1.5)),
+              axis.title.x = element_text(size = rel(1.5)),
+              axis.text.x  = element_text(size= rel(1.2)),
+              axis.text.y = element_text(size= rel(1.2)) ) +
+        ylab("Within groups sum of squares") +
+        xlab("Number of clusters") +
+        ggtitle( paste0("Clustering variables: \n", plot_title) ) 
+    
+    return(list(clusters=df, plot=clust_plot))
+    
 }
 
-# plot 
-df <- data.frame(Clusters = 1:20, wwss=wss)
-ggplot(data=df, aes(x=Clusters, y=wwss, group=1)) +
-    geom_line(colour="dodgerblue2") +
-    geom_point(colour="dodgerblue2", size=3 ) +
-    geom_vline(xintercept = 6, linetype=4) +
-    theme_bw() +
-    theme(plot.title = element_text(size = rel(2)),
-          axis.title.y = element_text(size = rel(1.5)),
-          axis.title.x = element_text(size = rel(1.5)),
-          axis.text.x  = element_text(size= rel(1.2)),
-          axis.text.y = element_text(size= rel(1.2)) ) +
-    ylab("Within groups sum of squares") +
-    xlab("Number of clusters") +
-    ggtitle("Clustering variables: \n market share by shelf space") 
-# choose 6 clusters
+# save storeID's then remove from dataset
+storeIDs <- as.integer(as.character(stores_dummies_mktshares$storeID))
+stores_dummies_mktshares[,storeID:=NULL]
 
+# Cluster
+# all mkt share by sell-in variables
+title1  <- "mkt share sell-in (no total sell-in or store dummies)"
+feat1   <- stores_dummies_mktshares[,1:242, with=FALSE]
+feat1   <- feat1[,store_total_quantity:=NULL]
+clust1  <- clustering( title1, feat1 )
 
-# Fit 6 clusters
-fit <- kmeans(mktshareshelf, 6, iter.max = 100) 
-#centroids <- aggregate(mktshareshelf, by=list(fit$cluster), FUN=mean)
-clustering2 <- data.frame(storeIDs, fit$cluster)
-names(clustering2) <- c("storeID", "clustering2")
+title2  <- "mkt share sell-in with total sell-in (no store dummies)"
+feat2   <- stores_dummies_mktshares[,1:242, with=FALSE]
+clust2  <- clustering( title2, feat2 )
 
-#saveRDS(clustering2, "storeID_clustering2.RData")
-rm(mktshareshelf)
+title3  <- "mkt share sell-in with store dummies (no total sell-in)"
+feat3   <- stores_dummies_mktshares[,1:1111, with=FALSE]
+feat3   <- feat3[,store_total_quantity:=NULL]
+clust3  <- clustering( title3, feat3 )
 
+title4  <- "mkt share sell-in with total sell-in and store dummies"
+feat4   <- stores_dummies_mktshares[,1:1111, with=FALSE]
+clust4  <- clustering( title4, feat4 )
 
+# all mkt share by sell-in AND all mkt share by shelf space variables - no store dummies
+title9  <- "mkt share sell-in and shelfspace (no total sell-in, total ss or store dummies)"
+feat9   <- stores_dummies_mktshares[,c(1:242, 1112:1353), with=FALSE]
+feat9   <- feat9[,c("store_total_quantity", "total_shelf_space"):=NULL]
+clust9  <- clustering( title9, feat9 )
+
+title12  <- "mkt share sell-in and shelfspace with total sell-in and total ss (no store dummies)"
+feat12   <- stores_dummies_mktshares[,c(1:242, 1112:1353), with=FALSE]
+clust12  <- clustering( title12, feat12 )
+
+# all mkt share by sell-in AND all mkt share by shelf space variables - with store dummies
+title13  <- "mkt share sell-in and shelfspace with store dummies (no total sell-in or total ss)"
+feat13   <- as.data.table(as.data.frame(stores_dummies_mktshares))
+feat13   <- feat13[,c("store_total_quantity", "total_shelf_space"):=NULL]
+clust13  <- clustering( title13, feat13 )
+
+title16  <- "mkt share sell-in and shelfspace with total sell-in, total ss and store dummies"
+feat16   <- as.data.table(as.data.frame(stores_dummies_mktshares))
+clust16  <- clustering( title16, feat16 )
+
+# plot
+grid.arrange(clust1$plot, clust2$plot, clust3$plot, clust4$plot, ncol = 2)
+grid.arrange(clust9$plot, clust12$plot, clust13$plot, clust16$plot, ncol = 2)
 
 ################################################################################
-### Clustering 3: all mkt share by sales and shelf space + total store quantity. No other store dummies. 
+# Check that clusters have more than 1 store.
 
-# remove store variables from both tables and store_total_quantity from one table
-mktsharesales <- stores_dummies_mktsharesales[,1:243, with=FALSE]
-mktshareshelf <- stores_dummies_mktshareshelf[,1:244, with=FALSE]
-mktshareshelf[,store_total_quantity := NULL]
+# calculate store cluster numbers using each of the chosen clusterings
+# Nb. These clusterings were chosen by logical reasoning. 
+chosen <- c("clust1", "clust2", "clust3", "clust4",
+            "clust9", "clust12", "clust13", "clust16")
+feats <- list(feat1, feat2, feat3, feat4,
+              feat9, feat12, feat13, feat16)
 
-# order both tables by storeID and then cbind (removing the storeID column)
-setorder(mktsharesales, storeID)
-setorder(mktshareshelf, storeID)
-mktshareshelf[,storeID:=NULL]
-mktshare <- cbind(mktsharesales, mktshareshelf)
-rm(mktsharesales, mktshareshelf)
+# no of clusters to test
+no_clusters <- 5:20
 
+# initialise an empty data frame to fill up
+clusters <- as.data.frame( matrix(NA, nrow=length(storeIDs), ncol=length(feats)*length(no_clusters)) )
+names(clusters) <- c(paste0(no_clusters[1], "_", chosen),
+                     paste0(no_clusters[2], "_", chosen),
+                     paste0(no_clusters[3], "_", chosen),
+                     paste0(no_clusters[4], "_", chosen),
+                     paste0(no_clusters[5], "_", chosen),
+                     paste0(no_clusters[6], "_", chosen),
+                     paste0(no_clusters[7], "_", chosen),
+                     paste0(no_clusters[8], "_", chosen),
+                     paste0(no_clusters[9], "_", chosen),
+                     paste0(no_clusters[10], "_", chosen),
+                     paste0(no_clusters[11], "_", chosen),
+                     paste0(no_clusters[12], "_", chosen),
+                     paste0(no_clusters[13], "_", chosen),
+                     paste0(no_clusters[14], "_", chosen),
+                     paste0(no_clusters[15], "_", chosen),
+                     paste0(no_clusters[16], "_", chosen) )
 
-# separate storeID into a different vector
-storeIDs <- mktshare$storeID
-mktshare[,storeID:=NULL]
-
-# Calculate the within group sum of squares for different k
-wss <- (nrow(mktshare)-1)*sum(apply(as.data.frame(mktshare),2,var))
-
-for (i in 2:20) {
-    wss[i] <- sum(kmeans(mktshare,centers=i, iter.max=100)$withinss)
+# for each of the chosen clusterings and no of clusters, produce the store cluster numbers
+for (k in 1:length(no_clusters)) {
+    print(k)
+    for (i in 1:length(chosen)) {
+        fit <- kmeans( feats[[i]], no_clusters[k], iter.max=100)
+        column <- (k-1)*length(chosen) + i
+        clusters[,column] <- fit$cluster
+    }
 }
 
-# plot 
-df <- data.frame(Clusters = 1:20, wwss=wss)
-ggplot(data=df, aes(x=Clusters, y=wwss, group=1)) +
-    geom_line(colour="dodgerblue2") +
-    geom_point(colour="dodgerblue2", size=3 ) +
-    geom_vline(xintercept = 7, linetype=4) +
-    theme_bw() +
-    theme(plot.title = element_text(size = rel(2)),
-          axis.title.y = element_text(size = rel(1.5)),
-          axis.title.x = element_text(size = rel(1.5)),
-          axis.text.x  = element_text(size= rel(1.2)),
-          axis.text.y = element_text(size= rel(1.2)) ) +
-    ylab("Within groups sum of squares") +
-    xlab("Number of clusters") +
-    ggtitle("Clustering variables: \n market share by sell-in and by shelf space") 
-# choose 7 clusters
+# add storeID's to data frame
+clusters <- cbind(storeIDs, clusters)
+names(clusters)[1] <- "storeID"
 
-# Fit 7 clusters
-fit <- kmeans(mktshare, 7, iter.max = 100) 
-#centroids <- aggregate(mktshareshelf, by=list(fit$cluster), FUN=mean)
-clustering3 <- data.frame(storeIDs, fit$cluster)
-names(clustering3) <- c("storeID", "clustering3")
-
-#saveRDS(clustering3, "storeID_clustering3.RData")
-rm(mktshare)
-
-
-
-################################################################################
-### Clustering 4: all mkt share by sales and shelf space + total store quantity + store dummies
-
-# remove store variables from both tables and store_total_quantity from one table
-mktsharesales <- as.data.table(as.data.frame(stores_dummies_mktsharesales))
-mktshareshelf <- stores_dummies_mktshareshelf[,1:244, with=FALSE]
-mktshareshelf[,store_total_quantity := NULL]
-
-# order both tables by storeID and then cbind (removing the storeID column)
-setorder(mktsharesales, storeID)
-setorder(mktshareshelf, storeID)
-mktshareshelf[,storeID:=NULL]
-mktshare_storedummies <- cbind(mktsharesales, mktshareshelf)
-rm(mktsharesales, mktshareshelf)
-
-
-# separate storeID into a different vector
-storeIDs <- mktshare_storedummies$storeID
-mktshare_storedummies[,storeID:=NULL]
-
-# Calculate the within group sum of squares for different k
-wss <- (nrow(mktshare_storedummies)-1)*sum(apply(as.data.frame(mktshare_storedummies),2,var))
-
-for (i in 2:20) {
-    wss[i] <- sum(kmeans(mktshare_storedummies,centers=i, iter.max=100)$withinss)
+# first run analysis: how many stores are in each cluster? 
+for ( i in 2:ncol(clusters) ) {
+    cat("column ", i, " min no of stores in cluster is ", min(table(clusters[,i])))
+    cat("\n")
 }
 
-# plot 
-df <- data.frame(Clusters = 1:20, wwss=wss)
-ggplot(data=df, aes(x=Clusters, y=wwss, group=1)) +
-    geom_line(colour="dodgerblue2") +
-    geom_point(colour="dodgerblue2", size=3 ) +
-    geom_vline(xintercept = 7, linetype=4) +
-    theme_bw() +
-    theme(plot.title = element_text(size = rel(2)),
-          axis.title.y = element_text(size = rel(1.5)),
-          axis.title.x = element_text(size = rel(1.5)),
-          axis.text.x  = element_text(size= rel(1.2)),
-          axis.text.y = element_text(size= rel(1.2)) ) +
-    ylab("Within groups sum of squares") +
-    xlab("Number of clusters") +
-    ggtitle("Clustering variables: \n market share by sell-in and shelf space and store variables") 
-# choose 7 clusters
+# find clusterings for which there is a cluster with only 1 store
+cols_to_remove <- c()
+for ( i in 2:ncol(clusters) ) {
+    if ( min(table(clusters[,i])) < 2) {
+        cols_to_remove <- c(cols_to_remove, i)
+    }
+}
 
-# Fit 7 clusters
-fit <- kmeans(mktshare_storedummies, 7, iter.max = 100) 
-clustering4 <- data.frame(storeIDs, fit$cluster)
-#centroids <- aggregate(mktshareshelf, by=list(fit$cluster), FUN=mean)
-names(clustering4) <- c("storeID", "clustering4")
+# remove clusterings for which there is a cluster with only 1 store
+clusters[cols_to_remove] <- list(NULL) 
 
-#saveRDS(clustering4, "storeID_clustering4.RData")
-rm(mktshare_storedummies)
-
-
+# save
+saveRDS(clusters, "clusterings_1.RData")
 
 
 ################################################################################
-############## Save the clusterings ############################################
-################################################################################
+# Check that every product is in each cluster 
 
-#merge them into one dataframe
-cluster = merge(clustering4,clustering3, by ="storeID")
-cluster = merge(cluster,clustering2, by = "storeID")
+# read in master table
+master <- readRDS("master_mktshare.RData")
 
-#change the names so that they represent what the clusters are based on 
-names(cluster)=c("storeID","shelf_sales_store","shelf_sales","shelf")
+# For each clustering, match the cluster numbers to the master table and count 
+# the number of unique products that exist in each cluster. 
+# There should be 107 (total number of alltimer products) in each cluster.
+clust_prods <- merge(master[,.(storeID, productID)], clusters, by="storeID", all.x=TRUE)
+names(clust_prods) <- paste0("n",names(clust_prods))
+rm(master)
 
-#save it
-saveRDS(cluster,"cluster.RData")
+cols_to_remove2 <- c()
+for ( i in 3:ncol(clust_prods) ) {
+    
+    # get column name
+    cl <- names(clust_prods)[i]
+    
+    # count number of unique prods in each cluster
+    prods_per_clust <- clust_prods[,.(no_prods = length(unique(nproductID))), by=cl]
+    
+    # if less than 107 products in each cluster return column name
+    if ( min(prods_per_clust$no_prods) < 107 ) {
+        cat(cl, "  min products per cluster is: ", min(prods_per_clust$no_prods), "\n")
+        cols_to_remove2 <- c(cols_to_remove2, i)
+    }
+}
 
+# remove clusterings where all 107 products do not appear in every cluster
+clusters[(cols_to_remove2-1)] <- list(NULL) 
 
-
+# save
+saveRDS(clusters, "clusterings_2.RData")
