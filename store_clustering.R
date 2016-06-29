@@ -425,6 +425,21 @@ clust16  <- clustering( title16, feat16 )
 grid.arrange(clust1$plot, clust2$plot, clust3$plot, clust4$plot, ncol = 2)
 grid.arrange(clust9$plot, clust12$plot, clust13$plot, clust16$plot, ncol = 2)
 
+# plot for report
+# df <- rbind( clust1$plot$data, clust2$plot$data, clust3$plot$data, clust4$plot$data,
+#              clust9$plot$data, clust12$plot$data, clust13$plot$data, clust16$plot$data )
+# df <- cbind( df, rep(1:8, each = 20))
+# names(df)[3] <- "Clustering"
+# df$Clustering <- as.factor(df$Clustering)
+# 
+# ggplot(df, aes(x=Clusters, y=wwss/1000, group=Clustering, colour=Clustering)) +
+#     geom_line(size=1) +
+#     geom_point() +
+#     theme_bw() +
+#     theme(axis.title.x = element_text(size=rel(1.2), margin=margin(15,0,0,0)), 
+#           axis.title.y = element_text(size = rel(1.2), margin=margin(0,15,0,0)) ) +
+#     ylab("Within groups sum of squares (1000s)")
+    
 ################################################################################
 # Check that clusters have more than 1 store.
 
