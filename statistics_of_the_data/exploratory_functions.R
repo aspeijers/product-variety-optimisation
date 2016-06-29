@@ -95,3 +95,10 @@ master_table$sub_chain <- as.factor(master_table$sub_chain)
 
 ggplot(master_table, aes(x = chain, y = total_quantity, fill=sub_chain, group=sub_chain)) + 
     geom_bar(stat = "summary", fun.y=sum)
+
+#SALES RATIO DISTRIBUTION
+jpeg("sr_hist.jpg", height = 600, width = 600)
+did1b <- readRDS("did1b.RData")
+hist(did1b$salesratio, main = "Sales ratio distribution", breaks = 24, xlab ="", cex.main =2)
+abline(v = 1, col = "red", lwd = 2)
+dev.off()
