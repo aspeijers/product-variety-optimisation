@@ -119,9 +119,9 @@ diffindiff <- function(treatment_product, inspected_product, days_window, introd
         relevant_sales_for_specific_store <- relevant_sales[storeID == relevant_events_forcalc$storeID[i],]
         # shift function -> add zero rows to sales function (look at promotion_identification_smoothing.R)
         relevant_events_forcalc$salesbefore[i] <- sum(relevant_sales_for_specific_store[date < relevant_events_forcalc$date[i] &
-                                                                                        date >= relevant_events_forcalc$date[i]-days_window, quantity_sold_kg])
+                                                                                            date >= relevant_events_forcalc$date[i]-days_window, quantity_sold_kg])
         relevant_events_forcalc$salesafter[i] <- sum(relevant_sales_for_specific_store[date >= relevant_events_forcalc$date[i] &
-                                                                                        date < relevant_events_forcalc$date[i]+days_window, quantity_sold_kg])
+                                                                                           date < relevant_events_forcalc$date[i]+days_window, quantity_sold_kg])
     }
     cat("\n")
     relevant_events_forcalc$salesratio <- relevant_events_forcalc$salesafter/relevant_events_forcalc$salesbefore
@@ -263,6 +263,8 @@ numberofevents <- function(treatment_product, inspected_product, days_window, in
     
 }
 
+
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #The next part of the code takes a lot of time to run,
 #it is meant to be run on a server or a powerful machine.
 library(foreach)
@@ -300,3 +302,37 @@ event_table_all$number_of_outs90[event_table_all$number_of_outs60>0] <-
 event_table_all$number_of_events90 <- event_table_all$number_of_intros90 + event_table_all$number_of_outs90
 event_table_all <- event_table_all[event_table_all$number_of_events90>10,]
 saveRDS(event_table_all, "event_table_all90.RData")
+
+salesratio_stats <- function(treatment_product, inspected_product, days_window, events, sales, promo_prod_date){
+    library(data.table)
+    sr_median_intro = NA
+    sr_smaller_than_1_intro = NA
+    sr_smaller_than_0.95_intro = NA
+    sr_median_out = NA
+    sr_bigger_than_1_out = NA
+    sr_bigger_than_1over0.95_out = NA
+    #still have to put in somehow condition to run the two part (Is there enough data?)
+    relevant_events_intro <- diffindiff(treatment_product, inspected_product, days_window, introduction = TRUE,
+                                        events, sales, promo_prod_date)
+    sr_median_intro <- median(relevant_events_intro$salesratio)
+    sr_smaller_than_1_intro <- sum(relevant_events_intro$salesratio<1)/nrow(relevant_events_intro)
+    sr_smaller_than_0.95_intro <- sum(relevant_events_intro$salesratio<0.95)/nrow(relevant_events_intro)
+    
+    relevant_events_out <- diffindiff(treatment_product, inspected_product, days_window, introduction = FALSE,
+                                      events, sales, promo_prod_date)
+    sr_median_out <- median(relevant_events_out$salesratio)
+    sr_bigger_than_1_out <- sum(relevant_events_out$salesratio>1)/nrow(relevant_events_out)
+    sr_bigger_than_1over0.95_out <- sum(relevant_events_out$salesratio>(1/0.95))/nrow(relevant_events_out)
+    
+    return(list(sr_median_intro = sr_median_intro,
+                sr_smaller_than_1_intro = sr_smaller_than_1_intro,
+                sr_smaller_than_0.95_intro = sr_smaller_than_0.95_intro,
+                sr_median_out = sr_median_out,
+                sr_bigger_than_1_out = sr_bigger_than_1_out,
+                sr_bigger_than_1over0.95_out = sr_bigger_than_1over0.95_out))
+}
+
+event_table_60d <- cbind(event_table_all90, foreach(x=iter(event_table_all90, by='row'), .combine=rbind) %dopar% salesratio_stats(as.character(x$treatment_productID), as.character(x$inspected_productID), 60, events, sales, promo_prod_date))
+event_table_90d <- cbind(event_table_all90, foreach(x=iter(event_table_all90, by='row'), .combine=rbind) %dopar% salesratio_stats(as.character(x$treatment_productID), as.character(x$inspected_productID), 90, events, sales, promo_prod_date))
+saveRDS(event_table_60d, "event_table_60d.RData")
+saveRDS(event_table_90d, "event_table_90d.RData")

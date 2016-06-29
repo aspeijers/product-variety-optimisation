@@ -90,21 +90,3 @@ for(i in 4:440){
     assortment_change[,i] <- product_store_timeline[,i+1]-product_store_timeline[,i]
 }
 saveRDS(assortment_change, file="assortment_change.RData")
-
-
-# table(assortment_change[,45])
-# 
-# sum(rowSums(assortment_change[,4:440]))
-# assortment_change[,1:3] <- product_store_timeline[,1:3]
-# product_store_timeline[, `:=`(c20150102 =  20150101!=20150102,
-#                               c20150103 =  20150102!=20150103)]
-
-# a <- product_store_timeline[, 4, with = FALSE]
-# b <- product_store_timeline[,5, with = FALSE]
-# ab <- a!=b
-# assortment_change[,storeID] := product_store_timeline[,storeID]
-# assortment_change[,1:3] <- product_store_timeline[,1:3, with=FALSE]
-# c <- data.table(names(assortment_change))
-# s<-product_store_timeline[,storeID]
-# assortment_change[, storeID = s]
-# assortment_change[,1:3]
