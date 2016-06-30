@@ -1,7 +1,7 @@
 ##################################################################################################
 ######## Description: Finding alltimer products and tagging "not_in_assortment_data"   
 ######## input: product_store_timeline.RData, sales.RData, product.RData
-######## output: assortment_changes.RData, availability column in the product.RData
+######## output: assortment_changes.RData, availability column in the product.RData; product_timeline.RData
 ################################################################################################## 
 
 library(data.table)
