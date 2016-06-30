@@ -1,27 +1,17 @@
-### rename_tables.R 
-Does exactly what it says. We rename variables and tables (mostly from Spanish to English) to make them more understandable.
-Running this file is a prerequisite for running all other files. 
+This folder consistis of the main analysis of our project.
+Short description of the main-analysis files:
 
-### changing_ownership.R
-Checks to see whether the chain, subchain and promo group for each store change over time. 
-Prerequisite: "rename_tables.R"
-Running this file is NOT a prerequisite for running any of the other files. 
-
-### product_store_timeline.R
-Brings all the assortment files together into one table. Calculates the number of days that each product was for sale in each store. Resulting tables are saved as "product_store_timeline.RData" and "product_store_timeline_total_days.RData".
-Prerequisite: "rename_tables.R"
-Running this file is a prerequisite for running "master_table_creation.R". 
-
-### master_table_creation.R
-Combines sales, with product and store variables. Sales are averaged over time. 
-Prerequisite: "product_store_timeline.R"
-Running this file is a prerequisite for running other files.
-
-### aggregate_sales_subChain_subFam.R
-Averages the sales over sub-chains and sub-families.
-Prerequisite: "master_table.R"
-
-### data_splitting.R
-Splits the master table data into training (75percent) and test (25percent) by stores, keeping the distribution of store sizes equal. There is also the start of some code to split by time, however this is not to be run yet. 
-Prerequisite: "master_table.R"
-Running this file will be a prerequisite to trialling sales functions. 
+- assortment_changes: Finding alltimer products and tagging "not_in_assortment_data"
+- creating_master_tabel: Creatng the master table without market shares
+- create_mkt_sales_master: Creatng the master table with sales market shares (shelf space market shares already exist)
+- creating_mkt_shelf_space_master: Creatng the master table with shelf space market shares
+- CV-cluster_evaluation: Evaluate clusters based on how well they predict the product market share (by sales) a customized cross-validation function
+- diffindiff: Identifying the events for each store (intoduction/removal of a product)
+- mkt_function: Average the product market share sell-in over the clusters in the best clustering
+- product_store_timeline: Creating the product_store_timeline (combining the information of the assortment folder)
+- promotion_identification: Identify promotion periods
+- shelf_space: Creating product-store timeline with respect to shelf space
+- store_clustering: Convert all variables in the master table to dummy variables for each store and cluster the stores based on various subsets of these variables
+- substitution_effects: Testing the different substitute rules and using the best to find the substitute pairs
+- suggestion_function: this ranks the products by their predicted mkt share and returns the suggested products; no substitution effects included
+- suggestion_with_substitution_effect: this file takes into acctount both the suggestions and the substitution effects

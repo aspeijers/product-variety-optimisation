@@ -2,7 +2,7 @@
 ######## Description: Identifying the events for each store (intoduction/removal of a product)
 ######## input: assortment_changes.RData, products.RData, product_store_timeline.RData, sales.RData
 ########        promotion_dates.RData
-######## output: events.RData, event_table_all.RData
+######## output: events.RData, event_table_all.RData; event_table_60d.RData; event_table_90d.RData
 ##################################################################################################
 
 
