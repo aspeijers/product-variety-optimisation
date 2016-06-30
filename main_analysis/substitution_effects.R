@@ -15,7 +15,7 @@ for(i in 15:20){
     event_table_90d[,i] <- unlist(event_table_90d[,i])
 }
 
-#removing obsrvation which are based on less than 10 events
+#removing observations which are based on less than 10 events
 event_table_60d[event_table_60d$number_of_intros60<10, 15:17] <- NA
 event_table_60d[event_table_60d$number_of_outs60<10, 18:20] <- NA
 event_table_90d[event_table_90d$number_of_intros90<10, 15:17] <- NA
@@ -126,8 +126,12 @@ sum(event_table_90d$same_type[event_table_90d$substitute_double])/sum(event_tabl
 
 
 library(igraph)
-substitutes <- event_table_60d[event_table_60d$substitute_both, 1:2]
+substitutes <- event_table_60d[event_table_60d$substitute_both, c(2,1)]
 saveRDS(substitutes, "substitutes.RData")
 s <- graph.data.frame(substitutes)
-tkplot(s)
+
+jpeg("substitutes_plot.jpg", width = 2000, height = 2000)
+plot(s, layout=layout_with_kk, vertex.label=NA,
+     vertex.size=5, edge.width=3,edge.arrow.size=1.7,edge.arrow.width=1.2, edge.color="black")
+dev.off()
 
